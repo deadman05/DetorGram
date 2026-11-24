@@ -11,6 +11,14 @@ on:
         options:
           - standalone
           - debug
+      arch:
+        description: 'CPU Architecture (arm64 = Fast ~15m, afat = Universal ~50m)'
+        required: true
+        default: 'arm64'
+        type: choice
+        options:
+          - arm64
+          - afat
 
 jobs:
   build:
@@ -40,7 +48,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ninja-build yasm nasm gperf meson pkg-config
           if command -v rustup >/dev/null 2>&1; then
-            rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android || true
+            if [ "${{ inputs.arch }}" = "arm64" ]; then
+              rustup target add aarch64-linux-android || true
+            else
+              rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android || true
+            fi
           fi
 
       - name: Install Android SDK 36, NDK 27 & CMake 3.22.1
@@ -54,6 +66,25 @@ jobs:
 
       - name: Setup Gradle cache
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Limit native build to arm64-v8a (Fast Build)
+        if: ${{ inputs.arch == 'arm64' }}
+        run: |
+          python3 - << 'EOF'
+          import pathlib, re
+
+          pattern = re.compile(r'abiFilters\s+["\'][^"\']+["\'](?:\s*,\s*["\'][^"\']+["\'])+')
+          for file_path in ["TMessagesProj/build.gradle", "TMessagesProj_AppStandalone/build.gradle"]:
+              p = pathlib.Path(file_path)
+              if not p.exists():
+                  continue
+              text = p.read_text()
+              new_text, count = pattern.subn('abiFilters "arm64-v8a"', text)
+              if count:
+                  p.write_text(new_text)
+                  print(f"Patched {count} abiFilters block(s) in {file_path}")
+          EOF
+          grep -n "abiFilters" TMessagesProj/build.gradle TMessagesProj_AppStandalone/build.gradle || true
 
       - name: Decode release keystore
         run: |
@@ -71,7 +102,7 @@ jobs:
           fi
           ./gradlew $TASK \
             --no-daemon \
-            --max-workers=2 \
+            --max-workers=4 \
             -PRELEASE_STORE_PASSWORD="${{ secrets.STORE_PASSWORD }}" \
             -PRELEASE_KEY_ALIAS="${{ secrets.KEY_ALIAS }}" \
             -PRELEASE_KEY_PASSWORD="${{ secrets.KEY_PASSWORD }}"
@@ -79,6 +110,6 @@ jobs:
       - name: Upload DetorGram APK
         uses: actions/upload-artifact@v4
         with:
-          name: DetorGram-${{ inputs.build_type }}-APK
+          name: DetorGram-${{ inputs.build_type }}-${{ inputs.arch }}-APK
           path: TMessagesProj_AppStandalone/build/outputs/apk/**/*.apk
           if-no-files-found: error
