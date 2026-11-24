@@ -75,6 +75,19 @@ public class VoIPHelper {
 	private static final int VOIP_SUPPORT_ID = 4244000;
 
 	public static void startCall(TLRPC.User user, boolean videoCall, boolean canVideoCall, final Activity activity, TLRPC.UserFull userFull, AccountInstance accountInstance) {
+		if (org.telegram.messenger.DetorConfig.isConfirmCall() && activity != null && user != null) {
+			new AlertDialog.Builder(activity)
+					.setTitle(videoCall ? "Start Video Call?" : "Start Voice Call?")
+					.setMessage("Call " + org.telegram.messenger.UserObject.getUserName(user) + "?")
+					.setPositiveButton("Call", (dialog, which) -> startCallInternal(user, videoCall, canVideoCall, activity, userFull, accountInstance))
+					.setNegativeButton(LocaleController.getString(R.string.Cancel), null)
+					.show();
+			return;
+		}
+		startCallInternal(user, videoCall, canVideoCall, activity, userFull, accountInstance);
+	}
+
+	private static void startCallInternal(TLRPC.User user, boolean videoCall, boolean canVideoCall, final Activity activity, TLRPC.UserFull userFull, AccountInstance accountInstance) {
 		if (accountInstance == null ? MessagesController.getInstance(UserConfig.selectedAccount).isFrozen() : accountInstance.getMessagesController().isFrozen()) {
 			AccountFrozenAlert.show(accountInstance == null ? UserConfig.selectedAccount : accountInstance.getCurrentAccount());
 			return;
