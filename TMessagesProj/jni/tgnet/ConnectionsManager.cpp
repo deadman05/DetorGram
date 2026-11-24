@@ -139,22 +139,27 @@ ConnectionsManager::~ConnectionsManager() {
 
 ConnectionsManager& ConnectionsManager::getInstance(int32_t instanceNum) {
     switch (instanceNum) {
-        case 0:
-            static ConnectionsManager instance0(0);
-            return instance0;
-        case 1:
-            static ConnectionsManager instance1(1);
-            return instance1;
-        case 2:
-            static ConnectionsManager instance2(2);
-            return instance2;
-        case 3:
-            static ConnectionsManager instance3(3);
-            return instance3;
-        case 4:
-        default:
-            static ConnectionsManager instance4(4);
-            return instance4;
+        case 0: { static ConnectionsManager instance0(0); return instance0; }
+        case 1: { static ConnectionsManager instance1(1); return instance1; }
+        case 2: { static ConnectionsManager instance2(2); return instance2; }
+        case 3: { static ConnectionsManager instance3(3); return instance3; }
+        case 4: { static ConnectionsManager instance4(4); return instance4; }
+        case 5: { static ConnectionsManager instance5(5); return instance5; }
+        case 6: { static ConnectionsManager instance6(6); return instance6; }
+        case 7: { static ConnectionsManager instance7(7); return instance7; }
+        case 8: { static ConnectionsManager instance8(8); return instance8; }
+        case 9: { static ConnectionsManager instance9(9); return instance9; }
+        case 10: { static ConnectionsManager instance10(10); return instance10; }
+        case 11: { static ConnectionsManager instance11(11); return instance11; }
+        case 12: { static ConnectionsManager instance12(12); return instance12; }
+        case 13: { static ConnectionsManager instance13(13); return instance13; }
+        case 14: { static ConnectionsManager instance14(14); return instance14; }
+        case 15: { static ConnectionsManager instance15(15); return instance15; }
+        case 16: { static ConnectionsManager instance16(16); return instance16; }
+        case 17: { static ConnectionsManager instance17(17); return instance17; }
+        case 18: { static ConnectionsManager instance18(18); return instance18; }
+        case 19:
+        default: { static ConnectionsManager instance19(19); return instance19; }
     }
 }
 
