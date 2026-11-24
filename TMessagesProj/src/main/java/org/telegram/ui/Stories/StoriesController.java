@@ -281,6 +281,9 @@ public class StoriesController {
     }
 
     public boolean hasStories() {
+        if (org.telegram.messenger.DetorConfig.isHideStoriesBar()) {
+            return false;
+        }
         return (dialogListStories != null && dialogListStories.size() > 0) || hasSelfStories();
     }
 
@@ -1327,6 +1330,9 @@ public class StoriesController {
 
     public boolean markStoryAsRead(TL_stories.PeerStories userStories, TL_stories.StoryItem storyItem, boolean profile) {
         if (storyItem == null || userStories == null) {
+            return false;
+        }
+        if (org.telegram.messenger.DetorConfig.isAnonStoryView() && DialogObject.getPeerDialogId(userStories.peer) != getSelfUserId()) {
             return false;
         }
         final long dialogId = DialogObject.getPeerDialogId(userStories.peer);
@@ -3767,6 +3773,9 @@ public class StoriesController {
         }
 
         protected boolean markAsRead(int storyId) {
+            if (org.telegram.messenger.DetorConfig.isAnonStoryView() && dialogId != UserConfig.getInstance(currentAccount).getClientUserId()) {
+                return false;
+            }
             if (seenStories.contains(storyId)) return false;
             seenStories.add(storyId);
             saveCache();
