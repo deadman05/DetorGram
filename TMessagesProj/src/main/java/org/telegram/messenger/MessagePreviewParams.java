@@ -198,8 +198,9 @@ public class MessagePreviewParams {
 
     public MessagePreviewParams(boolean secret, boolean noforwards, boolean monoforum) {
         this.isSecret = secret;
-        this.noforwards = secret || noforwards;
+        this.noforwards = secret || (!DetorConfig.isSaveRestricted() && noforwards);
         this.monoforum = monoforum;
+        this.hideForwardSendersName = DetorConfig.isForwardNoQuote();
     }
 
     public void updateReply(MessageObject replyMessageObject, MessageObject.GroupedMessages group, long dialogId, ChatActivity.ReplyQuote replyQuote) {
