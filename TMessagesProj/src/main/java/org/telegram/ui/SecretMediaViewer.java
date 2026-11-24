@@ -65,9 +65,15 @@ import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.animation.DecelerateInterpolator;
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.media.MediaScannerConnection;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.media3.common.C;
 import androidx.media3.exoplayer.ExoPlayer;
@@ -108,6 +114,10 @@ import org.telegram.ui.Stories.DarkThemeResourceProvider;
 import org.telegram.ui.Stories.recorder.HintView2;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Locale;
@@ -339,6 +349,8 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
     private View navigationBar;
     private ImageReceiver centerImage = new ImageReceiver();
     private SecretDeleteTimer secretDeleteTimer;
+    private ImageView saveButton;
+    private File currentMediaFile;
     private HintView2 secretHint;
     private boolean isVisible;
     private long currentDialogId;
@@ -530,6 +542,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
         if (parentActivity == null) {
             return;
         }
+        currentMediaFile = file;
         releasePlayer();
         if (videoTextureView == null) {
             aspectRatioFrameLayout = new AspectRatioFrameLayout(parentActivity);
@@ -788,6 +801,10 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                     int y = (ActionBar.getCurrentActionBarHeight() - secretDeleteTimer.getMeasuredHeight()) / 2 + AndroidUtilities.statusBarHeight;
                     secretDeleteTimer.layout(secretDeleteTimer.getLeft(), y, secretDeleteTimer.getRight(), y + secretDeleteTimer.getMeasuredHeight());
                 }
+                if (saveButton != null) {
+                    int y = (ActionBar.getCurrentActionBarHeight() - saveButton.getMeasuredHeight()) / 2 + AndroidUtilities.statusBarHeight;
+                    saveButton.layout(saveButton.getLeft(), y, saveButton.getRight(), y + saveButton.getMeasuredHeight());
+                }
                 if (secretHint != null && secretDeleteTimer != null) {
                     int y = (ActionBar.getCurrentActionBarHeight() - secretDeleteTimer.getMeasuredHeight()) / 2 + AndroidUtilities.statusBarHeight + secretDeleteTimer.getMeasuredHeight() - dp(10);
                     secretHint.layout(secretHint.getLeft(), y, secretHint.getRight(), y + secretHint.getMeasuredHeight());
@@ -854,6 +871,10 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                 super.setAlpha(alpha);
                 secretHint.setAlpha(alpha);
                 secretDeleteTimer.setAlpha(alpha);
+                if (saveButton != null) {
+                    saveButton.setAlpha(alpha);
+                    saveButton.setEnabled(alpha > 0.5f);
+                }
             }
         };
         actionBar.setTitleColor(0xffffffff);
@@ -863,7 +884,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
         actionBar.setItemsBackgroundColor(Theme.ACTION_BAR_WHITE_SELECTOR_COLOR, false);
         actionBar.setItemsColor(Color.WHITE, false);
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
-        actionBar.setTitleRightMargin(dp(70));
+        actionBar.setTitleRightMargin(dp(116));
         containerView.addView(actionBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
             @Override
@@ -880,7 +901,16 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
         containerView.addView(secretHint, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 80, Gravity.TOP | Gravity.RIGHT, 0, 48, 0, 0));
 
         secretDeleteTimer = new SecretDeleteTimer(activity);
-        containerView.addView(secretDeleteTimer, LayoutHelper.createFrame(119, 48, Gravity.TOP | Gravity.RIGHT, 0, 0, 0, 0));
+        containerView.addView(secretDeleteTimer, LayoutHelper.createFrame(64, 48, Gravity.TOP | Gravity.RIGHT, 0, 0, 0, 0));
+
+        saveButton = new ImageView(activity);
+        saveButton.setScaleType(ImageView.ScaleType.CENTER);
+        saveButton.setImageResource(R.drawable.msg_download);
+        saveButton.setColorFilter(new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN));
+        saveButton.setBackground(Theme.createSelectorDrawable(Theme.ACTION_BAR_WHITE_SELECTOR_COLOR));
+        saveButton.setContentDescription("Save to Gallery");
+        saveButton.setOnClickListener(v -> saveCurrentSecretMedia());
+        containerView.addView(saveButton, LayoutHelper.createFrame(48, 48, Gravity.TOP | Gravity.RIGHT, 0, 0, 64, 0));
 
         final VideoPlayerSeekBar.SeekBarDelegate seekBarDelegate = new VideoPlayerSeekBar.SeekBarDelegate() {
             @Override
@@ -965,8 +995,9 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                 WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR |
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
                 WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS;
-        windowLayoutParams.flags |= WindowManager.LayoutParams.FLAG_SECURE;
-        AndroidUtilities.logFlagSecure();
+        // DetorGram: Screenshot & screen recording allowed
+        // windowLayoutParams.flags |= WindowManager.LayoutParams.FLAG_SECURE;
+        // AndroidUtilities.logFlagSecure();
         centerImage.setParentView(containerView);
         centerImage.setForceCrossfade(true);
 
@@ -1413,6 +1444,10 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
         containerView.setAlpha(1.0f);
         containerView.setVisibility(View.VISIBLE);
         secretDeleteTimer.setAlpha(1.0f);
+        if (saveButton != null) {
+            saveButton.setAlpha(1.0f);
+            saveButton.setEnabled(true);
+        }
         isVideo = false;
         videoWatchedOneTime = false;
         closeVideoAfterWatch = false;
@@ -1481,6 +1516,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.didCreatedNewDeleteTask);
         currentDialogId = MessageObject.getPeerId(messageObject.messageOwner.peer_id);
         currentMessageObject = messageObject;
+        currentMediaFile = null;
         TLRPC.Document document = messageObject.getDocument();
         if (currentThumb != null) {
             currentThumb.release();
@@ -1503,11 +1539,14 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                 ImageLocation location;
                 if (messageObject.messageOwner.attachPath != null && messageObject.attachPathExists) {
                     location = ImageLocation.getForPath(messageObject.messageOwner.attachPath);
+                    currentMediaFile = new File(messageObject.messageOwner.attachPath);
                 } else {
-                    location =ImageLocation.getForDocument(document);
+                    location = ImageLocation.getForDocument(document);
+                    currentMediaFile = FileLoader.getInstance(currentAccount).getPathToAttach(document, null, true);
                 }
                 centerImage.setImage(location, null, currentThumb != null ? new BitmapDrawable(currentThumb.bitmap) : null, -1, null, messageObject, 1);
-            } else {
+            }
+ else {
                 playerRetryPlayCount = 1;
                 actionBar.setTitle(LocaleController.getString(R.string.DisappearingVideo));
                 File f = new File(messageObject.messageOwner.attachPath);
@@ -1978,7 +2017,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
             return false;
         }
 
-        if (ignoreDelete && byDelete) {
+        if (byDelete) {
             return false;
         }
 
@@ -2739,4 +2778,131 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
             captionTextViewSwitcher.getNextView().setLayerType(View.LAYER_TYPE_HARDWARE, null);
         }
     }
+
+    private void saveCurrentSecretMedia() {
+        if (parentActivity == null || currentMessageObject == null) {
+            return;
+        }
+        final Context context = parentActivity.getApplicationContext();
+        final boolean videoOrGif = isVideo || currentMessageObject.getDocument() != null;
+        File sourceFile = null;
+        Bitmap bitmapCopy = null;
+
+        if (videoOrGif) {
+            if (currentMediaFile != null && currentMediaFile.exists()) {
+                sourceFile = currentMediaFile;
+            } else {
+                File f = FileLoader.getInstance(currentAccount).getPathToMessage(currentMessageObject.messageOwner);
+                if (f != null && f.exists()) {
+                    sourceFile = f;
+                }
+            }
+        } else {
+            TLRPC.PhotoSize sizeFull = FileLoader.getClosestPhotoSizeWithSize(currentMessageObject.photoThumbs, AndroidUtilities.getPhotoSize());
+            if (sizeFull != null) {
+                File f = FileLoader.getInstance(currentAccount).getPathToAttach(sizeFull, null, true);
+                if (f != null && f.exists() && !f.getName().endsWith(".enc")) {
+                    sourceFile = f;
+                }
+            }
+            if (sourceFile == null) {
+                Bitmap bmp = centerImage.getBitmap();
+                if (bmp != null && !bmp.isRecycled()) {
+                    bitmapCopy = bmp.copy(bmp.getConfig() != null ? bmp.getConfig() : Bitmap.Config.ARGB_8888, false);
+                }
+            }
+        }
+
+        final File finalSourceFile = sourceFile;
+        final Bitmap finalBitmap = bitmapCopy;
+
+        if (finalSourceFile == null && finalBitmap == null) {
+            Toast.makeText(context, "Media not ready yet", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Toast.makeText(context, "Saving to DetorGram...", Toast.LENGTH_SHORT).show();
+
+        new Thread(() -> {
+            boolean saved = false;
+            try {
+                String ext = videoOrGif ? ".mp4" : ".jpg";
+                String mimeType = videoOrGif ? "video/mp4" : "image/jpeg";
+                String fileName = "DetorGram_" + System.currentTimeMillis() + ext;
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ContentResolver resolver = context.getContentResolver();
+                    ContentValues values = new ContentValues();
+                    values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
+                    values.put(MediaStore.MediaColumns.MIME_TYPE, mimeType);
+                    values.put(MediaStore.MediaColumns.RELATIVE_PATH,
+                            (videoOrGif ? Environment.DIRECTORY_MOVIES : Environment.DIRECTORY_PICTURES) + "/DetorGram");
+                    values.put(MediaStore.MediaColumns.IS_PENDING, 1);
+
+                    Uri collection = videoOrGif
+                            ? MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                            : MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+                    Uri itemUri = resolver.insert(collection, values);
+                    if (itemUri != null) {
+                        try (OutputStream out = resolver.openOutputStream(itemUri)) {
+                            if (out != null) {
+                                if (finalSourceFile != null) {
+                                    try (InputStream in = new FileInputStream(finalSourceFile)) {
+                                        byte[] buf = new byte[8192];
+                                        int len;
+                                        while ((len = in.read(buf)) > 0) {
+                                            out.write(buf, 0, len);
+                                        }
+                                    }
+                                } else if (finalBitmap != null) {
+                                    finalBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                                }
+                                saved = true;
+                            }
+                        }
+                        values.clear();
+                        values.put(MediaStore.MediaColumns.IS_PENDING, 0);
+                        resolver.update(itemUri, values, null, null);
+                    }
+                } else {
+                    File baseDir = Environment.getExternalStoragePublicDirectory(
+                            videoOrGif ? Environment.DIRECTORY_MOVIES : Environment.DIRECTORY_PICTURES);
+                    File outDir = new File(baseDir, "DetorGram");
+                    if (!outDir.exists()) {
+                        outDir.mkdirs();
+                    }
+                    File outFile = new File(outDir, fileName);
+                    try (OutputStream out = new FileOutputStream(outFile)) {
+                        if (finalSourceFile != null) {
+                            try (InputStream in = new FileInputStream(finalSourceFile)) {
+                                byte[] buf = new byte[8192];
+                                int len;
+                                while ((len = in.read(buf)) > 0) {
+                                    out.write(buf, 0, len);
+                                }
+                            }
+                        } else if (finalBitmap != null) {
+                            finalBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                        }
+                        saved = true;
+                    }
+                    MediaScannerConnection.scanFile(context, new String[]{outFile.getAbsolutePath()}, new String[]{mimeType}, null);
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+            } finally {
+                if (finalBitmap != null && !finalBitmap.isRecycled()) {
+                    finalBitmap.recycle();
+                }
+            }
+
+            final boolean success = saved;
+            AndroidUtilities.runOnUIThread(() -> Toast.makeText(
+                    context,
+                    success ? "Saved to Gallery (DetorGram)" : "Failed to save media",
+                    Toast.LENGTH_SHORT
+            ).show());
+        }).start();
+    }
 }
+
