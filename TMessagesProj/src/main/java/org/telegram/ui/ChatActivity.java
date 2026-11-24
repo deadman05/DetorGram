@@ -1727,6 +1727,7 @@ public class ChatActivity extends BaseFragment implements
 
     private final static int chat_menu_topic_create = 73;
     private final static int chat_menu_topics_panel = 75;
+    private final static int detor_settings_btn = 9991;
 
     private final static int id_chat_compose_panel = 1000;
 
@@ -3494,6 +3495,9 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         protected boolean canCopy() {
+            if (org.telegram.messenger.DetorConfig.isSaveRestricted()) {
+                return true;
+            }
             if (chatActivity != null && chatActivity.getDialogId() == UserObject.VERIFY) {
                 return true;
             }
@@ -4050,6 +4054,12 @@ public class ChatActivity extends BaseFragment implements
                     openTopicsPanel();
                 } else if (id == chat_menu_topic_create) {
                     presentFragment(TopicCreateFragment.create(-dialog_id, 0).setOpenInChatActivity(ChatActivity.this));
+                } else if (id == detor_settings_btn) {
+                    DetorSettingsSheet.show(getParentActivity(), () -> {
+                        if (chatAdapter != null) {
+                            chatAdapter.notifyDataSetChanged();
+                        }
+                    });
                 } else if (id == 888) {
                     dumpCanvas();
                 } else if (id == 889) {
@@ -4276,6 +4286,9 @@ public class ChatActivity extends BaseFragment implements
                 userFull = getMessagesController().getUserFull(currentUser.id);
             }
             createTopicsPanelItem(menu);
+            if (!inPreviewMode) {
+                menu.addItem(detor_settings_btn, R.drawable.msg_settings_old).setContentDescription("DetorGram Settings");
+            }
             headerItem = menu.addItem(chat_menu_options, otherIcon);
             updateTopicsPanelItem();
             headerItem.setSubMenuDelegate(new ActionBarMenuItem.ActionBarSubMenuItemDelegate() {

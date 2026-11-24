@@ -872,8 +872,9 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
                 secretHint.setAlpha(alpha);
                 secretDeleteTimer.setAlpha(alpha);
                 if (saveButton != null) {
-                    saveButton.setAlpha(alpha);
-                    saveButton.setEnabled(alpha > 0.5f);
+                    boolean allowSave = org.telegram.messenger.DetorConfig.isViewOnceSave();
+                    saveButton.setAlpha(allowSave ? alpha : 0f);
+                    saveButton.setEnabled(allowSave && alpha > 0.5f);
                 }
             }
         };
@@ -1445,8 +1446,10 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
         containerView.setVisibility(View.VISIBLE);
         secretDeleteTimer.setAlpha(1.0f);
         if (saveButton != null) {
+            boolean allowSave = org.telegram.messenger.DetorConfig.isViewOnceSave();
+            saveButton.setVisibility(allowSave ? View.VISIBLE : View.GONE);
             saveButton.setAlpha(1.0f);
-            saveButton.setEnabled(true);
+            saveButton.setEnabled(allowSave);
         }
         isVideo = false;
         videoWatchedOneTime = false;
@@ -1604,6 +1607,12 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
             FileLog.e(e);
         }
 
+        if (org.telegram.messenger.DetorConfig.isViewOnceSave()) {
+            windowLayoutParams.flags &= ~WindowManager.LayoutParams.FLAG_SECURE;
+        } else {
+            windowLayoutParams.flags |= WindowManager.LayoutParams.FLAG_SECURE;
+            AndroidUtilities.logFlagSecure();
+        }
         WindowManager wm = (WindowManager) parentActivity.getSystemService(Context.WINDOW_SERVICE);
         wm.addView(windowView, windowLayoutParams);
         secretDeleteTimer.invalidate();
@@ -2017,7 +2026,7 @@ public class SecretMediaViewer implements NotificationCenter.NotificationCenterD
             return false;
         }
 
-        if (byDelete) {
+        if (byDelete && org.telegram.messenger.DetorConfig.isViewOnceSave()) {
             return false;
         }
 

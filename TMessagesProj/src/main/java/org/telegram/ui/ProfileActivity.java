@@ -15942,13 +15942,36 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         if (onlineTextView == null) {
             return;
         }
-        final CharSequence text;
+        CharSequence text;
         if (mediaHeaderVisible && mediaCounterText != null) {
             text = mediaCounterText;
         } else if (showPhotoDescription && photoDescriptionText != null) {
             text = photoDescriptionText;
         } else {
             text = profileStatusText;
+            if (org.telegram.messenger.DetorConfig.isShowIdDc()) {
+                long targetId = userId != 0 ? userId : chatId;
+                if (targetId != 0) {
+                    int dcId = 0;
+                    if (userId != 0) {
+                        TLRPC.User u = getMessagesController().getUser(userId);
+                        if (u != null && u.photo != null) {
+                            dcId = u.photo.dc_id;
+                        }
+                    } else if (chatId != 0) {
+                        TLRPC.Chat c = getMessagesController().getChat(chatId);
+                        if (c != null && c.photo != null) {
+                            dcId = c.photo.dc_id;
+                        }
+                    }
+                    String idTag = "ID: " + targetId + (dcId > 0 ? " (DC" + dcId + ")" : "");
+                    if (text == null || text.length() == 0) {
+                        text = idTag;
+                    } else if (!text.toString().contains("ID: ")) {
+                        text = android.text.TextUtils.concat(text, " • ", idTag);
+                    }
+                }
+            }
         }
         if (onlineTextView.setTextAnimated(text, animated && !openAnimationInProgress) && fragmentView != null) {
             // centred by its width

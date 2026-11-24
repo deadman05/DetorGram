@@ -494,6 +494,7 @@ public class ProfileActivity2 extends BaseFragment implements
     private static final int ID_BIZ_HOURS = 9;
     private static final int ID_BIZ_LOCATION = 10;
     private static final int ID_NOTE = 11;
+    private static final int ID_DETOR_ID = 9992;
 
     private boolean isSection(View view) {
         if (view == null) return false;
@@ -555,6 +556,18 @@ public class ProfileActivity2 extends BaseFragment implements
                 }
             }
             items.add(UItem.asSpace(dp(10)));
+        }
+
+        if (org.telegram.messenger.DetorConfig.isShowIdDc()) {
+            long targetId = user != null ? user.id : (chat != null ? chat.id : dialogId);
+            int dcId = 0;
+            if (user != null && user.photo != null) {
+                dcId = user.photo.dc_id;
+            } else if (chat != null && chat.photo != null) {
+                dcId = chat.photo.dc_id;
+            }
+            String idText = String.valueOf(targetId) + (dcId > 0 ? " (DC" + dcId + ")" : "");
+            items.add(TextDetailCell.Factory.of(ID_DETOR_ID, idText, user != null ? "User ID" : "Chat ID"));
         }
 
         items.add(UItem.asSpace(dp(10)));
@@ -734,6 +747,10 @@ public class ProfileActivity2 extends BaseFragment implements
         if (item.id == ID_BIZ_HOURS) {
             hoursExpanded = !hoursExpanded;
             listView.adapter.update(true);
+        } else if (item.id == ID_DETOR_ID) {
+            long targetId = user != null ? user.id : (chat != null ? chat.id : dialogId);
+            AndroidUtilities.addToClipboard(String.valueOf(targetId));
+            BulletinFactory.of(ProfileActivity2.this).createCopyBulletin("ID copied: " + targetId).show();
         }
     }
 
@@ -783,8 +800,20 @@ public class ProfileActivity2 extends BaseFragment implements
             }
         }
 
-//        title.setText(title.getText() + "fjskla jdsfklsd jasdj;lf sdjlf jlfj dls ffka ljdsfkasdfj;ldsf;lsdjfladsfkl;dsjklf;ads");
-//        subtitle.setText(subtitle.getText() + "fjskla jdsfklsd jasdj;lf sdjlf jlfj dls fasjfkasdlfjdsajfkldsfkjssdfsdalkfjlaksdjfkl");
+        if (org.telegram.messenger.DetorConfig.isShowIdDc() && subtitle != null) {
+            long targetId = user != null ? user.id : (chat != null ? chat.id : dialogId);
+            int dcId = 0;
+            if (user != null && user.photo != null) {
+                dcId = user.photo.dc_id;
+            } else if (chat != null && chat.photo != null) {
+                dcId = chat.photo.dc_id;
+            }
+            CharSequence cur = subtitle.getText();
+            String tag = " • ID: " + targetId + (dcId > 0 ? " (DC" + dcId + ")" : "");
+            if (cur != null && !cur.toString().contains("ID: ")) {
+                subtitle.setText(cur + tag);
+            }
+        }
 
         updateAvatar();
     }
