@@ -1466,6 +1466,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     public boolean hasDiscussion;
     public boolean isPinned;
     private boolean wasPinned;
+    private boolean wasDetorDeleted;
     public boolean isReportChat;
     public long linkedChatId;
     public boolean isRepliesChat;
@@ -6257,10 +6258,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         TLRPC.Message newReply = messageObject.hasValidReplyMessageObject() ? messageObject.replyMessageObject.messageOwner : null;
         boolean messageIdChanged = currentMessageObject == null || currentMessageObject.getId() != messageObject.getId();
         boolean messageChanged = currentMessageObject != messageObject || messageObject.forceUpdate || (isRoundVideo && isPlayingRound != (MediaController.getInstance().isPlayingMessage(currentMessageObject) && delegate != null && !delegate.keyboardIsOpened()));
+        boolean isDetorDeleted = org.telegram.messenger.DetorConfig.isAntiDelete() && org.telegram.messenger.DetorConfig.isMessageDeleted(currentAccount, messageObject.getDialogId(), messageObject.getId());
         boolean dataChanged = currentMessageObject != null && currentMessageObject.getId() == messageObject.getId() && lastSendState == MessageObject.MESSAGE_SEND_STATE_EDITING && messageObject.isSent() ||
                 currentMessageObject == messageObject && (isUserDataChanged() || photoNotSet) ||
                 lastPostAuthor != messageObject.messageOwner.post_author ||
                 wasPinned != isPinned ||
+                wasDetorDeleted != isDetorDeleted ||
                 newReply != lastReplyMessage ||
                 messageObject.translated != lastTranslated;
         boolean groupChanged = groupedMessages != currentMessagesGroup;
@@ -6355,6 +6358,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 stickerSetIcons.readyToDie();
             }
             wasPinned = isPinned;
+            wasDetorDeleted = isDetorDeleted;
             pinnedBottom = bottomNear;
             this.firstInChat = firstInChat;
             this.lastInChatList = lastInChatList;
