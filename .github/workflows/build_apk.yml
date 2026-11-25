@@ -12,13 +12,13 @@ on:
           - standalone
           - debug
       arch:
-        description: 'CPU Architecture (arm64 = Fast ~15m, afat = Universal ~55m)'
+        description: 'Architecture (afat = Universal All Devices ~45m, arm64 = Fast Build ~15m)'
         required: true
-        default: 'arm64'
+        default: 'afat'
         type: choice
         options:
-          - arm64
           - afat
+          - arm64
 
 jobs:
   build:
@@ -67,7 +67,7 @@ jobs:
       - name: Setup Gradle cache
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Limit native build to arm64-v8a (Fast Build)
+      - name: Limit native build to arm64-v8a (Fast Build Only)
         if: ${{ inputs.arch == 'arm64' }}
         run: |
           python3 - << 'EOF'
@@ -84,13 +84,73 @@ jobs:
                   p.write_text(new_text)
                   print(f"Patched {count} abiFilters block(s) in {file_path}")
           EOF
-          grep -n "abiFilters" TMessagesProj/build.gradle TMessagesProj_AppStandalone/build.gradle || true
 
       - name: Decode release keystore
         run: |
           mkdir -p TMessagesProj/config
           echo "${{ secrets.SIGNING_KEY }}" | tr -d '\n\r ' | base64 --decode > TMessagesProj/config/release.keystore
           ls -lh TMessagesProj/config/release.keystore
+
+      - name: Apply DetorGram App Logo
+        run: |
+          if [ ! -f "TMessagesProj/config/detor_icon.png" ]; then
+            echo "detor_icon.png not found, keeping default icon."
+            exit 0
+          fi
+          sudo apt-get install -y python3-pil
+          python3 - << 'EOF'
+          import pathlib
+          from PIL import Image
+
+          src = Image.open("TMessagesProj/config/detor_icon.png").convert("RGBA")
+          res_roots = [
+              pathlib.Path("TMessagesProj/src/main/res"),
+              pathlib.Path("TMessagesProj_AppStandalone/src/main/res"),
+          ]
+          replaced = 0
+          for root in res_roots:
+              if not root.exists():
+                  continue
+              for png in root.rglob("ic_launcher*.png"):
+                  with Image.open(png) as orig:
+                      size = orig.size
+                  src.resize(size, Image.Resampling.LANCZOS).save(png, "PNG")
+                  replaced += 1
+
+              anydpi = root / "mipmap-anydpi-v26"
+              if anydpi.exists():
+                  nodpi = root / "drawable-nodpi"
+                  nodpi.mkdir(parents=True, exist_ok=True)
+                  canvas = Image.new("RGBA", (432, 432), (0, 0, 0, 0))
+                  fg_size = int(432 * 0.72)
+                  fg_img = src.resize((fg_size, fg_size), Image.Resampling.LANCZOS)
+                  offset = (432 - fg_size) // 2
+                  canvas.paste(fg_img, (offset, offset), fg_img)
+                  canvas.save(nodpi / "ic_detor_fg.png", "PNG")
+
+                  drawable_dir = root / "drawable"
+                  drawable_dir.mkdir(parents=True, exist_ok=True)
+                  (drawable_dir / "ic_detor_bg.xml").write_text(
+                      '<?xml version="1.0" encoding="utf-8"?>\n'
+                      '<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">\n'
+                      '    <gradient android:startColor="#2FB8FF" android:endColor="#A83BFF" android:angle="315" />\n'
+                      '</shape>\n',
+                      encoding="utf-8"
+                  )
+
+                  adaptive_xml = (
+                      '<?xml version="1.0" encoding="utf-8"?>\n'
+                      '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
+                      '    <background android:drawable="@drawable/ic_detor_bg" />\n'
+                      '    <foreground android:drawable="@drawable/ic_detor_fg" />\n'
+                      '</adaptive-icon>\n'
+                  )
+                  for xml in anydpi.glob("ic_launcher*.xml"):
+                      xml.write_text(adaptive_xml, encoding="utf-8")
+                      print(f"Updated adaptive icon: {xml}")
+
+          print(f"Replaced {replaced} launcher PNG files.")
+          EOF
 
       - name: Build DetorGram APK
         run: |
@@ -111,6 +171,6 @@ jobs:
       - name: Upload DetorGram APK
         uses: actions/upload-artifact@v4
         with:
-          name: DetorGram-${{ inputs.build_type }}-${{ inputs.arch }}-APK
+          name: DetorGram-${{ inputs.build_type }}-${{ inputs.arch == 'afat' && 'Universal' || 'arm64' }}-APK
           path: TMessagesProj_AppStandalone/build/outputs/apk/**/*.apk
           if-no-files-found: error
