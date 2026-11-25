@@ -44,7 +44,7 @@ public class DetorStoriesSheet {
 
         final int account = dialogsActivity.getCurrentAccount();
         final MessagesController mc = MessagesController.getInstance(account);
-        final StoriesController sc = dialogsActivity.getStoriesController();
+        final StoriesController sc = mc.getStoriesController();
 
         ScrollView scroll = new ScrollView(activity);
         scroll.setVerticalScrollBarEnabled(false);
