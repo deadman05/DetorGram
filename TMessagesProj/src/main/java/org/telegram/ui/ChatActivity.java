@@ -4288,10 +4288,10 @@ public class ChatActivity extends BaseFragment implements
                 userFull = getMessagesController().getUserFull(currentUser.id);
             }
             createTopicsPanelItem(menu);
-            if (!inPreviewMode) {
-                menu.addItem(detor_settings_btn, R.drawable.msg_settings_old).setContentDescription("DetorGram Settings");
-            }
             headerItem = menu.addItem(chat_menu_options, otherIcon);
+            if (!inPreviewMode) {
+                headerItem.lazilyAddSubItem(detor_settings_btn, R.drawable.msg_settings_old, "DetorGram Settings");
+            }
             updateTopicsPanelItem();
             headerItem.setSubMenuDelegate(new ActionBarMenuItem.ActionBarSubMenuItemDelegate() {
                 @Override
@@ -7299,7 +7299,6 @@ public class ChatActivity extends BaseFragment implements
             final int indexToAdd = chatActivityFadeView != null ? contentView.indexOfChild(chatActivityFadeView) : -1;
             contentView.addView(mentionContainer, indexToAdd, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 110, Gravity.LEFT | Gravity.BOTTOM));
         }
-        DetorChatHub.attach(this, contentView);
         contentPreviewViewerDelegate = new ContentPreviewViewer.ContentPreviewViewerDelegate() {
             @Override
             public void sendSticker(TLRPC.Document sticker, String query, Object parent, boolean notify, int scheduleDate, int scheduleRepeatPeriod) {
@@ -9061,6 +9060,7 @@ public class ChatActivity extends BaseFragment implements
             });
         }
 
+        DetorChatHub.attach(this, contentView);
         return fragmentView;
     }
 
