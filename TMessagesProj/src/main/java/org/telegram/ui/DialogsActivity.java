@@ -3380,20 +3380,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         fragmentSearchFieldWatcher.setDoNotCloseAfterFieldEmpty();
 
         if (initialDialogsType == DIALOGS_TYPE_DEFAULT) {
-            if (!onlySelect && folderId == 0 && communityId == 0) {
-                ActionBarMenuItem detorSettingsItem = menu.addItem(9991, R.drawable.msg_settings_old);
-                detorSettingsItem.setContentDescription("DetorGram Settings");
-                detorSettingsItem.setOnClickListener(v -> DetorSettingsSheet.show(getParentActivity(), () -> {
-                    updateStoriesVisibility(true);
-                    if (viewPages != null) {
-                        for (int a = 0; a < viewPages.length; a++) {
-                            if (viewPages[a] != null && viewPages[a].dialogsAdapter != null) {
-                                viewPages[a].dialogsAdapter.notifyDataSetChanged();
-                            }
-                        }
-                    }
-                }));
-            }
             optionsItem = menu.addItem(4, R.drawable.ic_ab_other);
             optionsItem.setContentDescription(LocaleController.getString(R.string.AccDescrMoreOptions));
             optionsItem.setOnClickListener(v -> {
@@ -3485,6 +3471,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             actionBar.setClipContent(true);
         //}
         actionBar.setTitleActionRunnable(() -> {
+            if (DetorStoriesHeader.collapseIfExpanded(DialogsActivity.this)) {
+                return;
+            }
             if (initialDialogsType != DIALOGS_TYPE_WIDGET) {
                 hideFloatingButton(false);
             }
@@ -5579,6 +5568,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
 
         updateStoriesVisibility(false);
+        if (!onlySelect && folderId == 0 && communityId == 0) {
+            DetorStoriesHeader.attach(this, contentView);
+        }
 
         updateFloatingButtonVisibility(false);
 
