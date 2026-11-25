@@ -780,10 +780,14 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             items.add(UItem.asShadow(null));
         }
 
-        if (accountNumbers.size() > 0) {
+        boolean canAddAccount = UserConfig.getActivatedAccountsCount() < UserConfig.MAX_ACCOUNT_COUNT;
+        if (accountNumbers.size() > 0 || canAddAccount) {
             items.add(UItem.asHeader(getString(R.string.SettingsAccounts)));
             for (int i = 0; i < accountNumbers.size(); ++i) {
                 items.add(AccountCell.Factory.of(i, accountNumbers.get(i)));
+            }
+            if (canAddAccount) {
+                items.add(SettingCell.Factory.of(9901, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.msg_addbot, getString(R.string.AddAccount)));
             }
             items.add(UItem.asShadow(null));
         }
@@ -857,6 +861,11 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             items.add(SettingCell.Factory.of(21, 0xFF55CA47, 0xFF27B434, 0, getString(R.string.DebugSendLastLogs)));
             items.add(SettingCell.Factory.of(22, 0xFFF45255, 0xFFDF3955, 0, getString(R.string.DebugClearLogs)));
         }
+
+        items.add(UItem.asShadow(null));
+        items.add(UItem.asHeader("Developer Credit"));
+        items.add(SettingCell.Factory.of(9902, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.settings_account, "Made by - Detor", "@iTsDetor"));
+        items.add(SettingCell.Factory.of(9903, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.settings_features, "Dev - Channel", "@DetorLab"));
 
         items.add(UItem.asCustomShadow(versionView));
     }
@@ -1001,6 +1010,27 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             }
             case 27: {
                 presentFragment(new HeaderSettingsActivity());
+                break;
+            }
+            case 9901: {
+                Integer availableAccount = null;
+                for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                    if (!UserConfig.getInstance(a).isClientActivated()) {
+                        availableAccount = a;
+                        break;
+                    }
+                }
+                if (availableAccount != null) {
+                    presentFragment(new LoginActivity(availableAccount));
+                }
+                break;
+            }
+            case 9902: {
+                Browser.openUrl(getParentActivity(), "https://t.me/iTsDetor");
+                break;
+            }
+            case 9903: {
+                Browser.openUrl(getParentActivity(), "https://t.me/+FJWj9qdmM3g1MjRl");
                 break;
             }
         }

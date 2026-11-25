@@ -98,6 +98,14 @@ public class DetorSettingsSheet {
         addToggle(context, container, "Forward Without Quote Default", DetorConfig.isForwardNoQuote(), v -> {
             DetorConfig.setForwardNoQuote(v);
             if (onChanged != null) onChanged.run();
+        }, true);
+        addToggle(context, container, "Show Chat Floating Hub (⚡)", DetorConfig.isShowChatFab(), v -> {
+            DetorConfig.setShowChatFab(v);
+            if (onChanged != null) onChanged.run();
+        }, true);
+        addToggle(context, container, "Multi-Story Limit Bypass", DetorConfig.isMultiStoryUnlock(), v -> {
+            DetorConfig.setMultiStoryUnlock(v);
+            if (onChanged != null) onChanged.run();
         }, false);
 
         BottomSheet.Builder builder = new BottomSheet.Builder(context);

@@ -3339,6 +3339,7 @@ public class ChatActivity extends BaseFragment implements
 
     @Override
     public void onFragmentDestroy() {
+        DetorChatHub.detach(this);
         super.onFragmentDestroy();
         if (messageMetricsView != null) {
             messageMetricsView.finish();
@@ -4056,6 +4057,7 @@ public class ChatActivity extends BaseFragment implements
                     presentFragment(TopicCreateFragment.create(-dialog_id, 0).setOpenInChatActivity(ChatActivity.this));
                 } else if (id == detor_settings_btn) {
                     DetorSettingsSheet.show(getParentActivity(), () -> {
+                        DetorChatHub.refreshVisibility(ChatActivity.this);
                         if (chatAdapter != null) {
                             chatAdapter.notifyDataSetChanged();
                         }
@@ -7297,6 +7299,7 @@ public class ChatActivity extends BaseFragment implements
             final int indexToAdd = chatActivityFadeView != null ? contentView.indexOfChild(chatActivityFadeView) : -1;
             contentView.addView(mentionContainer, indexToAdd, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 110, Gravity.LEFT | Gravity.BOTTOM));
         }
+        DetorChatHub.attach(this, contentView);
         contentPreviewViewerDelegate = new ContentPreviewViewer.ContentPreviewViewerDelegate() {
             @Override
             public void sendSticker(TLRPC.Document sticker, String query, Object parent, boolean notify, int scheduleDate, int scheduleRepeatPeriod) {
