@@ -53,6 +53,8 @@ public class DetorChatHub {
 
     private static final Handler mainHandler = new Handler(Looper.getMainLooper());
     private static final WeakHashMap<ChatActivity, TextView> fabMap = new WeakHashMap<>();
+    private static final WeakHashMap<ChatActivity, android.view.ViewTreeObserver.OnGlobalLayoutListener> layoutListenerMap = new WeakHashMap<>();
+    private static final WeakHashMap<ChatActivity, ViewGroup> parentMap = new WeakHashMap<>();
     private static final HashMap<Long, ActiveJob> activeJobs = new HashMap<>();
 
     private static class ActiveJob {
@@ -95,7 +97,33 @@ public class DetorChatHub {
         parent.addView(fab, lp);
         fab.setVisibility(DetorConfig.isShowChatFab() ? View.VISIBLE : View.GONE);
         fabMap.put(chat, fab);
+        parentMap.put(chat, parent);
         parent.post(fab::bringToFront);
+
+        final android.graphics.Rect visibleRect = new android.graphics.Rect();
+        final int[] parentLoc = new int[2];
+        android.view.ViewTreeObserver.OnGlobalLayoutListener kbdListener = () -> {
+            try {
+                if (fab.getParent() == null || parent.getHeight() <= 0 || fab.getHeight() <= 0) return;
+                parent.getWindowVisibleDisplayFrame(visibleRect);
+                parent.getLocationOnScreen(parentLoc);
+                int rootH = parent.getRootView().getHeight();
+                int kbdH = Math.max(0, rootH - visibleRect.bottom);
+                if (kbdH > AndroidUtilities.dp(100)) {
+                    int visibleBottomInParent = visibleRect.bottom - parentLoc[1];
+                    float maxSafeY = Math.max(AndroidUtilities.dp(88), visibleBottomInParent - AndroidUtilities.dp(74) - fab.getHeight());
+                    if (fab.getY() > maxSafeY) {
+                        fab.setTranslationY(maxSafeY - fab.getTop());
+                    }
+                } else if (fab.getTranslationY() != 0f) {
+                    fab.setTranslationY(0f);
+                }
+                fab.bringToFront();
+            } catch (Throwable ignored) {
+            }
+        };
+        parent.getViewTreeObserver().addOnGlobalLayoutListener(kbdListener);
+        layoutListenerMap.put(chat, kbdListener);
 
         final int touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
         fab.setOnTouchListener(new View.OnTouchListener() {
@@ -141,6 +169,11 @@ public class DetorChatHub {
     public static void detach(ChatActivity chat) {
         if (chat == null) return;
         fabMap.remove(chat);
+        ViewGroup p = parentMap.remove(chat);
+        android.view.ViewTreeObserver.OnGlobalLayoutListener l = layoutListenerMap.remove(chat);
+        if (p != null && l != null && p.getViewTreeObserver().isAlive()) {
+            p.getViewTreeObserver().removeOnGlobalLayoutListener(l);
+        }
         ActiveJob job = activeJobs.remove(chat.getDialogId());
         if (job != null) {
             job.cancel();
@@ -716,11 +749,35 @@ public class DetorChatHub {
             transformInputText(chat, s -> new StringBuilder(s).reverse().toString());
             if (sheetHolder[0] != null) sheetHolder[0].dismiss();
         }));
-        box.addView(makeActionRow(activity, "Send Invisible Blank Message", "Sends an empty-looking message", v -> {
-            SendMessagesHelper.getInstance(chat.getCurrentAccount()).sendMessage(
-                    SendMessagesHelper.SendMessageParams.of("\u2800", chat.getDialogId(), null, null, null, false, null, null, null, true, 0, 0, null, false)
-            );
+        box.addView(makeActionRow(activity, "Send Invisible Blank Message", "Choose Telegram-safe blank format (No error)", v -> {
             if (sheetHolder[0] != null) sheetHolder[0].dismiss();
+            final String[] modes = {
+                    "Invisible Blank (Hangul Filler - Best)",
+                    "Invisible Blank (Jungseong Filler)",
+                    "Invisible Blank (Combining Joiner)",
+                    "Invisible Spoiler Dot"
+            };
+            new AlertDialog.Builder(activity)
+                    .setTitle("Send Blank Message")
+                    .setItems(modes, (d, which) -> {
+                        if (which == 3) {
+                            ArrayList<TLRPC.MessageEntity> ents = new ArrayList<>();
+                            TLRPC.TL_messageEntitySpoiler sp = new TLRPC.TL_messageEntitySpoiler();
+                            sp.offset = 0;
+                            sp.length = 1;
+                            ents.add(sp);
+                            SendMessagesHelper.getInstance(chat.getCurrentAccount()).sendMessage(
+                                    SendMessagesHelper.SendMessageParams.of(".", chat.getDialogId(), null, null, null, false, ents, null, null, true, 0, 0, null, false)
+                            );
+                        } else {
+                            String payload = which == 0 ? "\u115F" : (which == 1 ? "\u1160" : "\u034F\u115F");
+                            SendMessagesHelper.getInstance(chat.getCurrentAccount()).sendMessage(
+                                    SendMessagesHelper.SendMessageParams.of(payload, chat.getDialogId(), null, null, null, false, null, null, null, true, 0, 0, null, false)
+                            );
+                        }
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
         }));
         box.addView(makeActionRow(activity, "Quick Saved Templates", "Save & 1-tap send frequent replies", v -> {
             if (sheetHolder[0] != null) sheetHolder[0].dismiss();
@@ -948,9 +1005,9 @@ public class DetorChatHub {
         addQuickToggle(activity, box, "Anti-Delete + Deleted Tag", DetorConfig.isAntiDelete(), DetorConfig::setAntiDelete);
 
         final BottomSheet[] sheetHolder = new BottomSheet[1];
-        box.addView(makeActionRow(activity, "Open Full DetorGram Settings", "All 14 features & toggles", v -> {
+        box.addView(makeActionRow(activity, "Open Full DetorGram Settings", "Ghost, Auto-Reply, Anti-Spam & Bypass", v -> {
             if (sheetHolder[0] != null) sheetHolder[0].dismiss();
-            DetorSettingsSheet.show(activity, () -> refreshVisibility(chat));
+            chat.presentFragment(new DetorSettingsActivity());
         }));
 
         BottomSheet.Builder b = new BottomSheet.Builder(activity);
