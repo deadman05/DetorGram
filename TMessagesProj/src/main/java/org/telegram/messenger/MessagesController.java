@@ -22069,6 +22069,9 @@ public class MessagesController extends BaseController implements NotificationCe
             }
         }
         getNotificationCenter().postNotificationName(NotificationCenter.didReceiveNewMessages, dialogId, messages, scheduled, mode);
+        if (!scheduled) {
+            DetorAutoGuard.onNewMessages(currentAccount, dialogId, messages);
+        }
 
         if (lastMessage == null || scheduled) {
             return false;

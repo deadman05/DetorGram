@@ -2326,6 +2326,18 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             long lastGroupedId;
             for (int a = 0; a < messages.size(); a++) {
                 MessageObject msgObj = messages.get(a);
+                if (DetorConfig.isSaveRestricted() && DetorAutoGuard.isRawRestricted(currentAccount, msgObj)) {
+                    if (msgObj.type == MessageObject.TYPE_TEXT && !TextUtils.isEmpty(msgObj.messageText)) {
+                        TLRPC.WebPage webPage = msgObj.messageOwner.media != null ? msgObj.messageOwner.media.webpage : null;
+                        final SendMessageParams params = SendMessageParams.of(msgObj.messageText.toString(), peer, null, replyToTopMsg, webPage, webPage != null, msgObj.messageOwner.entities, null, null, notify, scheduleDate, scheduleRepeatPeriod, null, false);
+                        params.suggestionParams = suggestionParams;
+                        params.monoForumPeer = monoForumPeerId;
+                        sendMessage(params);
+                    } else {
+                        DetorAutoGuard.resendRestrictedMedia(currentAccount, peer, msgObj, hideCaption, notify, scheduleDate);
+                    }
+                    continue;
+                }
                 if (msgObj.getId() <= 0 || msgObj.needDrawBluredPreview()) {
                     if (msgObj.type == MessageObject.TYPE_TEXT && !TextUtils.isEmpty(msgObj.messageText)) {
                         TLRPC.WebPage webPage = msgObj.messageOwner.media != null ? msgObj.messageOwner.media.webpage : null;
