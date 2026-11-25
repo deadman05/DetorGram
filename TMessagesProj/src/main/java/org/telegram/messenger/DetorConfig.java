@@ -64,6 +64,92 @@ public class DetorConfig {
     public static boolean isMultiStoryUnlock() { return getPrefs().getBoolean("multi_story_unlock", true); }
     public static void setMultiStoryUnlock(boolean v) { getPrefs().edit().putBoolean("multi_story_unlock", v).apply(); }
 
+    // --- Auto-Reply (Away Mode) ---
+    public static boolean isAutoReplyEnabled() { return getPrefs().getBoolean("ar_enabled", false); }
+    public static void setAutoReplyEnabled(boolean v) { getPrefs().edit().putBoolean("ar_enabled", v).apply(); }
+
+    public static boolean isAutoReplyBgOnly() { return getPrefs().getBoolean("ar_bg_only", true); }
+    public static void setAutoReplyBgOnly(boolean v) { getPrefs().edit().putBoolean("ar_bg_only", v).apply(); }
+
+    public static boolean isAutoReplyNonContactsOnly() { return getPrefs().getBoolean("ar_non_contacts", false); }
+    public static void setAutoReplyNonContactsOnly(boolean v) { getPrefs().edit().putBoolean("ar_non_contacts", v).apply(); }
+
+    public static String getAutoReplyText() {
+        return getPrefs().getString("ar_text", "Hey! I'm currently offline/busy. I'll reply as soon as I'm back.");
+    }
+    public static void setAutoReplyText(String s) { getPrefs().edit().putString("ar_text", s).apply(); }
+
+    public static int getAutoReplyCooldownMin() { return getPrefs().getInt("ar_cooldown_min", 30); }
+    public static void setAutoReplyCooldownMin(int m) { getPrefs().edit().putInt("ar_cooldown_min", m).apply(); }
+
+    // --- Smart Anti-Spam (3 Warnings -> Auto-Block) ---
+    public static boolean isAntiSpamEnabled() { return getPrefs().getBoolean("as_enabled", false); }
+    public static void setAntiSpamEnabled(boolean v) { getPrefs().edit().putBoolean("as_enabled", v).apply(); }
+
+    public static boolean isAntiSpamIgnoreContacts() { return getPrefs().getBoolean("as_ignore_contacts", true); }
+    public static void setAntiSpamIgnoreContacts(boolean v) { getPrefs().edit().putBoolean("as_ignore_contacts", v).apply(); }
+
+    public static boolean isAntiSpamLinkDetect() { return getPrefs().getBoolean("as_link_detect", true); }
+    public static void setAntiSpamLinkDetect(boolean v) { getPrefs().edit().putBoolean("as_link_detect", v).apply(); }
+
+    public static boolean isAntiSpamRepeatDetect() { return getPrefs().getBoolean("as_repeat_detect", true); }
+    public static void setAntiSpamRepeatDetect(boolean v) { getPrefs().edit().putBoolean("as_repeat_detect", v).apply(); }
+
+    public static int getAntiSpamThreshold() { return getPrefs().getInt("as_threshold", 5); }
+    public static void setAntiSpamThreshold(int n) { getPrefs().edit().putInt("as_threshold", n).apply(); }
+
+    public static String getAntiSpamWarnMsg() {
+        return getPrefs().getString("as_warn_msg", "⚠️ Warning {count}/3 ({reason}): Please stop spamming or you will be automatically blocked.");
+    }
+    public static void setAntiSpamWarnMsg(String s) { getPrefs().edit().putString("as_warn_msg", s).apply(); }
+
+    public static String getAntiSpamBlockMsg() {
+        return getPrefs().getString("as_block_msg", "🚫 Warning 3/3 ({reason}): Spam limit exceeded. You have been automatically blocked.");
+    }
+    public static void setAntiSpamBlockMsg(String s) { getPrefs().edit().putString("as_block_msg", s).apply(); }
+
+    public static String getGuardWhitelist() { return getPrefs().getString("guard_whitelist", ""); }
+    public static void setGuardWhitelist(String s) { getPrefs().edit().putString("guard_whitelist", s).apply(); }
+
+    public static boolean isWhitelisted(long userId) {
+        String raw = getGuardWhitelist();
+        if (raw == null || raw.trim().isEmpty()) return false;
+        String target = String.valueOf(userId);
+        for (String p : raw.split("[,\\s]+")) {
+            if (target.equals(p.trim())) return true;
+        }
+        return false;
+    }
+
+    private static final String LOG_SEP = "\n<<<DETOR_LOG>>>\n";
+
+    public static java.util.List<String> getSpamLog() {
+        String raw = getPrefs().getString("as_block_log", "");
+        java.util.ArrayList<String> list = new java.util.ArrayList<>();
+        if (raw != null && !raw.isEmpty()) {
+            for (String p : raw.split(java.util.regex.Pattern.quote(LOG_SEP))) {
+                if (!p.isEmpty()) list.add(p);
+            }
+        }
+        return list;
+    }
+
+    public static void addSpamLog(String entry) {
+        java.util.List<String> list = getSpamLog();
+        list.add(0, entry);
+        while (list.size() > 50) list.remove(list.size() - 1);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < list.size(); i++) {
+            if (i > 0) sb.append(LOG_SEP);
+            sb.append(list.get(i));
+        }
+        getPrefs().edit().putString("as_block_log", sb.toString()).apply();
+    }
+
+    public static void clearSpamLog() {
+        getPrefs().edit().remove("as_block_log").apply();
+    }
+
     // --- Quick Saved Templates ---
     private static final String TPL_SEP = "\n<<<DETOR_TPL>>>\n";
 
