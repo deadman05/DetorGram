@@ -18916,7 +18916,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     for (int m = 0; m < update.messages.size(); m++) {
                         DetorConfig.markMessageDeleted(currentAccount, 0, update.messages.get(m));
                     }
-                    AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.updateAllMessages));
+                    AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.updateInterfaces, UPDATE_MASK_MESSAGE_TEXT));
                 } else {
                     if (deletedMessages == null) {
                         deletedMessages = new LongSparseArray<>();
@@ -19449,7 +19449,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     for (int m = 0; m < update.messages.size(); m++) {
                         DetorConfig.markMessageDeleted(currentAccount, update.channel_id, update.messages.get(m));
                     }
-                    AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.updateAllMessages));
+                    AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.updateInterfaces, UPDATE_MASK_MESSAGE_TEXT));
                 } else {
                     if (deletedMessages == null) {
                         deletedMessages = new LongSparseArray<>();
