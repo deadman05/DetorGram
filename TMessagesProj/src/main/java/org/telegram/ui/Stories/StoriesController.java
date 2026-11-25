@@ -4529,6 +4529,9 @@ public class StoriesController {
     private StoryLimit storyLimitCached;
 
     public StoryLimit checkStoryLimit() {
+        if (org.telegram.messenger.DetorConfig.isMultiStoryUnlock()) {
+            return null;
+        }
         final int countLimit = UserConfig.getInstance(currentAccount).isPremium() ?
             MessagesController.getInstance(currentAccount).storyExpiringLimitPremium :
             MessagesController.getInstance(currentAccount).storyExpiringLimitDefault;
@@ -4668,11 +4671,17 @@ public class StoriesController {
     }
 
     public boolean hasStoryLimit() {
+        if (org.telegram.messenger.DetorConfig.isMultiStoryUnlock()) {
+            return false;
+        }
         StoryLimit storyLimit = checkStoryLimit();
         return storyLimit != null && storyLimit.active(currentAccount);
     }
 
     public boolean hasStoryLimit(int count) {
+        if (org.telegram.messenger.DetorConfig.isMultiStoryUnlock()) {
+            return false;
+        }
         StoryLimit storyLimit = checkStoryLimit();
         return storyLimit != null && storyLimit.active(currentAccount, count);
     }
