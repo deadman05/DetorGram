@@ -40575,7 +40575,7 @@ public class ChatActivity extends BaseFragment implements
                 && messageObject.messageOwner != null
                 && chatMode != MODE_SCHEDULED
                 && !isPeerNoForwards()
-                && !messageObject.messageOwner.noforwards
+                && (org.telegram.messenger.DetorConfig.isSaveRestricted() || !messageObject.messageOwner.noforwards)
                 && messageObject.type != MessageObject.TYPE_PAID_MEDIA;
         }
 
@@ -47778,6 +47778,9 @@ public class ChatActivity extends BaseFragment implements
     }
 
     public boolean isPeerNoForwards() {
+        if (org.telegram.messenger.DetorConfig.isSaveRestricted()) {
+            return false;
+        }
         return currentChat != null ?
             getMessagesController().isChatNoForwards(currentChat) :
             getMessagesController().isUserNoForwards(userInfo);
