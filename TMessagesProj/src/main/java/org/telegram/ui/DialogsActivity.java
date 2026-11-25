@@ -3139,23 +3139,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
         ActionBarMenu menu = actionBar.createMenu();
         menu.setTranslationX(-dp(5));
-        if (!onlySelect && folderId == 0 && communityId == 0) {
-            ActionBarMenuItem storiesPillItem = menu.addItemWithWidth(9988, 0, dp(76));
-            android.widget.TextView storiesPill = new android.widget.TextView(context);
-            storiesPill.setText("Stories");
-            storiesPill.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 12);
-            storiesPill.setTypeface(AndroidUtilities.bold());
-            storiesPill.setTextColor(0xFFFFFFFF);
-            storiesPill.setGravity(Gravity.CENTER);
-            android.graphics.drawable.GradientDrawable pillBg = new android.graphics.drawable.GradientDrawable(
-                    android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-                    new int[]{0xFF2AABEE, 0xFF7C4DFF}
-            );
-            pillBg.setCornerRadius(dp(14));
-            storiesPill.setBackground(pillBg);
-            storiesPillItem.addView(storiesPill, LayoutHelper.createFrame(68, 28, Gravity.CENTER));
-            storiesPillItem.setOnClickListener(v -> DetorStoriesSheet.show(DialogsActivity.this));
-        }
         searchItem = menu.addItem(0, R.drawable.outline_header_search).setIsSearchField(true, false);
         searchItem.setOnClickListener(v -> {
             showSearch(true, false, true);
