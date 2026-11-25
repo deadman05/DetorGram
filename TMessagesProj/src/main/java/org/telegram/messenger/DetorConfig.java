@@ -58,6 +58,51 @@ public class DetorConfig {
     public static boolean isForwardNoQuote() { return getPrefs().getBoolean("forward_no_quote", false); }
     public static void setForwardNoQuote(boolean v) { getPrefs().edit().putBoolean("forward_no_quote", v).apply(); }
 
+    public static boolean isShowChatFab() { return getPrefs().getBoolean("show_chat_fab", true); }
+    public static void setShowChatFab(boolean v) { getPrefs().edit().putBoolean("show_chat_fab", v).apply(); }
+
+    public static boolean isMultiStoryUnlock() { return getPrefs().getBoolean("multi_story_unlock", true); }
+    public static void setMultiStoryUnlock(boolean v) { getPrefs().edit().putBoolean("multi_story_unlock", v).apply(); }
+
+    // --- Quick Saved Templates ---
+    private static final String TPL_SEP = "\n<<<DETOR_TPL>>>\n";
+
+    public static java.util.List<String> getTemplates() {
+        String raw = getPrefs().getString("quick_templates", "");
+        java.util.ArrayList<String> list = new java.util.ArrayList<>();
+        if (raw != null && !raw.isEmpty()) {
+            String[] parts = raw.split(java.util.regex.Pattern.quote(TPL_SEP));
+            for (String p : parts) {
+                if (!p.isEmpty()) list.add(p);
+            }
+        }
+        return list;
+    }
+
+    public static void addTemplate(String text) {
+        java.util.List<String> list = getTemplates();
+        if (!list.contains(text)) {
+            list.add(0, text);
+            saveTemplates(list);
+        }
+    }
+
+    public static void removeTemplate(String text) {
+        java.util.List<String> list = getTemplates();
+        if (list.remove(text)) {
+            saveTemplates(list);
+        }
+    }
+
+    private static void saveTemplates(java.util.List<String> list) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < list.size(); i++) {
+            if (i > 0) sb.append(TPL_SEP);
+            sb.append(list.get(i));
+        }
+        getPrefs().edit().putString("quick_templates", sb.toString()).apply();
+    }
+
     // --- Deleted Messages Tracker ("deleted" tag ke liye) ---
     private static synchronized void ensureDeletedCache() {
         if (deletedMessagesCache == null) {
