@@ -20,7 +20,10 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.DetorAutoGuard;
 import org.telegram.messenger.DetorConfig;
 import org.telegram.messenger.R;
+import org.telegram.messenger.UserConfig;
+import org.telegram.messenger.UserObject;
 import org.telegram.messenger.browser.Browser;
+import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
@@ -28,6 +31,7 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.HeaderCell;
 import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.ScaleStateListAnimator;
 
 import java.util.List;
 
@@ -72,7 +76,7 @@ public class DetorSettingsActivity extends BaseFragment {
 
         contentList = new LinearLayout(context);
         contentList.setOrientation(LinearLayout.VERTICAL);
-        contentList.setPadding(AndroidUtilities.dp(14), AndroidUtilities.dp(14), AndroidUtilities.dp(14), AndroidUtilities.dp(32));
+        contentList.setPadding(AndroidUtilities.dp(14), AndroidUtilities.dp(14), AndroidUtilities.dp(14), AndroidUtilities.dp(34));
         scroll.addView(contentList, LayoutHelper.createScroll(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
 
         rebuildContent(context);
@@ -92,11 +96,19 @@ public class DetorSettingsActivity extends BaseFragment {
         switch (page) {
             case PAGE_PRIVACY: return "Ghost & Privacy";
             case PAGE_MEDIA: return "Media & Bypass";
-            case PAGE_AUTOREPLY: return "Auto-Reply (Away Mode)";
-            case PAGE_ANTISPAM: return "Smart Anti-Spam Guard";
-            case PAGE_UI: return "Chat Hub & Interface";
+            case PAGE_AUTOREPLY: return "Auto-Reply (Away)";
+            case PAGE_ANTISPAM: return "Smart Anti-Spam";
+            case PAGE_UI: return "Chat Hub & UI";
             default: return "DetorGram Settings";
         }
+    }
+
+    private String getAccountDisplayLabel() {
+        TLRPC.User u = UserConfig.getInstance(currentAccount).getCurrentUser();
+        if (u == null) return "Account #" + (currentAccount + 1);
+        String name = UserObject.getUserName(u);
+        String uname = UserObject.getPublicUsername(u);
+        return TextUtils.isEmpty(uname) ? name : (name + " (@" + uname + ")");
     }
 
     private void rebuildContent(Context ctx) {
@@ -114,65 +126,75 @@ public class DetorSettingsActivity extends BaseFragment {
     // ==================== MAIN HUB PAGE ====================
 
     private void buildMainPage(Context ctx) {
-        // Banner card
+        // Premium Gradient Hero Card
         LinearLayout banner = new LinearLayout(ctx);
         banner.setOrientation(LinearLayout.VERTICAL);
-        banner.setPadding(AndroidUtilities.dp(18), AndroidUtilities.dp(18), AndroidUtilities.dp(18), AndroidUtilities.dp(18));
+        banner.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(18), AndroidUtilities.dp(20), AndroidUtilities.dp(18));
         GradientDrawable bannerBg = new GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                new int[]{0xFF6C3BFF, 0xFF1E88E5}
+                new int[]{0xFF2FB8FF, 0xFF6C3BFF, 0xFFA83BFF}
         );
-        bannerBg.setCornerRadius(AndroidUtilities.dp(18));
+        bannerBg.setCornerRadius(AndroidUtilities.dp(20));
+        bannerBg.setStroke(AndroidUtilities.dp(1), 0x44FFFFFF);
         banner.setBackground(bannerBg);
+        banner.setElevation(AndroidUtilities.dp(6));
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        blp.bottomMargin = AndroidUtilities.dp(14);
+        blp.bottomMargin = AndroidUtilities.dp(16);
         banner.setLayoutParams(blp);
 
         TextView bt = new TextView(ctx);
-        bt.setText("⚡ DetorGram Pro Control");
-        bt.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 19);
+        bt.setText("⚡ DetorGram Pro");
+        bt.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
         bt.setTypeface(Typeface.DEFAULT_BOLD);
         bt.setTextColor(Color.WHITE);
         banner.addView(bt);
 
         TextView bs = new TextView(ctx);
-        bs.setText("Privacy, Bypass, Away Auto-Reply & 3-Strike Anti-Spam — All organized in dedicated sections.");
-        bs.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-        bs.setTextColor(0xE0FFFFFF);
-        bs.setPadding(0, AndroidUtilities.dp(4), 0, 0);
+        bs.setText("Active Account: " + getAccountDisplayLabel());
+        bs.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12.5f);
+        bs.setTypeface(Typeface.DEFAULT_BOLD);
+        bs.setTextColor(0xF0FFFFFF);
+        bs.setPadding(0, AndroidUtilities.dp(5), 0, 0);
         banner.addView(bs);
+
+        TextView bsub = new TextView(ctx);
+        bsub.setText("Privacy, Bypass, Per-Account Auto-Reply & 3-Strike Anti-Spam.");
+        bsub.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+        bsub.setTextColor(0xCCFFFFFF);
+        bsub.setPadding(0, AndroidUtilities.dp(3), 0, 0);
+        banner.addView(bsub);
         contentList.addView(banner);
 
         // Core Sections Card
-        LinearLayout secCard = makeSectionCard(ctx, "Core Features");
-        secCard.addView(makeNavRow(ctx, "GHOST", 0xFF009688, "Ghost & Privacy",
-                "Hide Seen, Typing, Always Offline, Anon Story", null,
+        LinearLayout secCard = makeSectionCard(ctx, "Core Modules");
+        secCard.addView(makeNavRow(ctx, "👻", 0xFF00BFA5, 0xFF00796B, "Ghost & Privacy",
+                "Hide Seen, Typing, Always Offline, Anon Story", null, true,
                 v -> presentFragment(new DetorSettingsActivity(PAGE_PRIVACY))));
-        secCard.addView(makeNavRow(ctx, "BYPASS", 0xFF7C4DFF, "Media & Bypass",
-                "Anti-Delete, Save Restricted (Bots/Channels), View-Once", null,
+        secCard.addView(makeNavRow(ctx, "🛡️", 0xFF7C4DFF, 0xFF512DA8, "Media & Bypass",
+                "Anti-Delete, Save Restricted, View-Once, No Ads", null, true,
                 v -> presentFragment(new DetorSettingsActivity(PAGE_MEDIA))));
-        secCard.addView(makeNavRow(ctx, "UI", 0xFF2196F3, "Chat Hub & Interface",
-                "Floating ⚡ Hub, ID & DC, Stories Bar, Call Confirm", null,
+        secCard.addView(makeNavRow(ctx, "⚡", 0xFF29B6F6, 0xFF0277BD, "Chat Hub & Interface",
+                "Floating Hub, ID & DC, Stories Bar, Call Confirm", null, false,
                 v -> presentFragment(new DetorSettingsActivity(PAGE_UI))));
         contentList.addView(secCard);
 
-        // Automation & Security Card (Business-style)
-        LinearLayout autoCard = makeSectionCard(ctx, "Automation & Protection");
-        autoCard.addView(makeNavRow(ctx, "AWAY", 0xFFFF9800, "Auto-Reply (Away Mode)",
-                "Smart offline auto-responder with cooldown",
-                DetorConfig.isAutoReplyEnabled() ? "ON" : "OFF",
+        // Automation & Protection (Per-Account)
+        LinearLayout autoCard = makeSectionCard(ctx, "Per-Account Automation");
+        autoCard.addView(makeNavRow(ctx, "🌙", 0xFFFFB74D, 0xFFE65100, "Auto-Reply (Away Mode)",
+                "Only for " + getAccountDisplayLabel(),
+                DetorConfig.isAutoReplyEnabled(currentAccount) ? "ACTIVE" : "OFF", true,
                 v -> presentFragment(new DetorSettingsActivity(PAGE_AUTOREPLY))));
-        autoCard.addView(makeNavRow(ctx, "GUARD", 0xFFE53935, "Smart Anti-Spam Guard",
-                "Flood, repeat & link detection • 3 warnings -> Auto-Block",
-                DetorConfig.isAntiSpamEnabled() ? "ON" : "OFF",
+        autoCard.addView(makeNavRow(ctx, "🚫", 0xFFFF5252, 0xFFC62828, "Smart Anti-Spam Guard",
+                "3 warnings -> Auto-Block • Per-account",
+                DetorConfig.isAntiSpamEnabled(currentAccount) ? "ACTIVE" : "OFF", false,
                 v -> presentFragment(new DetorSettingsActivity(PAGE_ANTISPAM))));
         contentList.addView(autoCard);
 
         // Developer Card
         LinearLayout devCard = makeSectionCard(ctx, "Developer Credit");
-        devCard.addView(makeNavRow(ctx, "DEV", 0xFF1E88E5, "Made by - Detor", "@iTsDetor", null,
+        devCard.addView(makeNavRow(ctx, "👨‍💻", 0xFF42A5F5, 0xFF1565C0, "Made by - Detor", "@iTsDetor", null, true,
                 v -> Browser.openUrl(getParentActivity(), "https://t.me/iTsDetor")));
-        devCard.addView(makeNavRow(ctx, "CH", 0xFF8E24AA, "Dev - Channel", "@DetorLab", null,
+        devCard.addView(makeNavRow(ctx, "📢", 0xFFAB47BC, 0xFF6A1B9A, "Dev - Channel", "@DetorLab", null, false,
                 v -> Browser.openUrl(getParentActivity(), "https://t.me/+FJWj9qdmM3g1MjRl")));
         contentList.addView(devCard);
     }
@@ -193,113 +215,123 @@ public class DetorSettingsActivity extends BaseFragment {
     private void buildMediaPage(Context ctx) {
         LinearLayout card = makeSectionCard(ctx, "Anti-Delete & Restrictions");
         addSwitch(ctx, card, "Anti-Delete + Deleted Tag", DetorConfig.isAntiDelete(), DetorConfig::setAntiDelete, true);
-        addSwitch(ctx, card, "Save Restricted (Channels & Bots + Auto Re-Send)", DetorConfig.isSaveRestricted(), DetorConfig::setSaveRestricted, true);
+        addSwitch(ctx, card, "Save Restricted (Users, Channels & Bots)", DetorConfig.isSaveRestricted(), DetorConfig::setSaveRestricted, true);
         addSwitch(ctx, card, "View-Once Save & Screenshot", DetorConfig.isViewOnceSave(), DetorConfig::setViewOnceSave, true);
         addSwitch(ctx, card, "Hide Sponsored Ads", DetorConfig.isHideSponsored(), DetorConfig::setHideSponsored, true);
         addSwitch(ctx, card, "Multi-Story Limit Bypass", DetorConfig.isMultiStoryUnlock(), DetorConfig::setMultiStoryUnlock, false);
         contentList.addView(card);
     }
 
-    // ==================== SUB-PAGE 3: AUTO-REPLY ====================
+    // ==================== SUB-PAGE 3: AUTO-REPLY (PER-ACCOUNT) ====================
 
     private void buildAutoReplyPage(Context ctx) {
+        contentList.addView(makeAccountScopeBanner(ctx, 0xFFFF9800, 0xFFE65100));
+
         LinearLayout card = makeSectionCard(ctx, "Away Auto-Reply");
-        addSwitch(ctx, card, "Enable Auto-Reply", DetorConfig.isAutoReplyEnabled(), v -> {
-            DetorConfig.setAutoReplyEnabled(v);
-            toast(ctx, v ? "Auto-Reply Enabled" : "Auto-Reply Disabled");
+        addSwitch(ctx, card, "Enable Auto-Reply (This Account)", DetorConfig.isAutoReplyEnabled(currentAccount), v -> {
+            DetorConfig.setAutoReplyEnabled(currentAccount, v);
+            toast(ctx, v ? "Auto-Reply ON for " + getAccountDisplayLabel() : "Auto-Reply OFF");
         }, true);
-        addSwitch(ctx, card, "Only When App in Background (Offline/Away)", DetorConfig.isAutoReplyBgOnly(), DetorConfig::setAutoReplyBgOnly, true);
-        addSwitch(ctx, card, "Non-Contacts Only (Ignore Saved Contacts)", DetorConfig.isAutoReplyNonContactsOnly(), DetorConfig::setAutoReplyNonContactsOnly, false);
+        addSwitch(ctx, card, "Only When App in Background (Away)", DetorConfig.isAutoReplyBgOnly(currentAccount),
+                v -> DetorConfig.setAutoReplyBgOnly(currentAccount, v), true);
+        addSwitch(ctx, card, "Non-Contacts Only", DetorConfig.isAutoReplyNonContactsOnly(currentAccount),
+                v -> DetorConfig.setAutoReplyNonContactsOnly(currentAccount, v), false);
         contentList.addView(card);
 
         LinearLayout cfg = makeSectionCard(ctx, "Reply Message & Rules");
-        cfg.addView(makeActionRow(ctx, "Away Message Text", DetorConfig.getAutoReplyText(), v -> showEditDialog(
-                ctx, "Edit Away Message", DetorConfig.getAutoReplyText(), true, val -> {
-                    DetorConfig.setAutoReplyText(val);
+        cfg.addView(makeActionRow(ctx, "Away Message Text", DetorConfig.getAutoReplyText(currentAccount), true, v -> showEditDialog(
+                ctx, "Edit Away Message", DetorConfig.getAutoReplyText(currentAccount), true, val -> {
+                    DetorConfig.setAutoReplyText(currentAccount, val);
                     rebuildContent(ctx);
                 }
         )));
-        cfg.addView(makeActionRow(ctx, "Cooldown Per User", DetorConfig.getAutoReplyCooldownMin() + " minutes (prevents spam loops)", v -> {
+        cfg.addView(makeActionRow(ctx, "Cooldown Per User",
+                DetorConfig.getAutoReplyCooldownMin(currentAccount) + " minutes (prevents reply loops)", true, v -> {
             final String[] labels = {"5 minutes", "15 minutes", "30 minutes", "1 hour", "6 hours", "24 hours"};
             final int[] mins = {5, 15, 30, 60, 360, 1440};
             new AlertDialog.Builder(ctx).setTitle("Auto-Reply Cooldown").setItems(labels, (d, which) -> {
-                DetorConfig.setAutoReplyCooldownMin(mins[which]);
+                DetorConfig.setAutoReplyCooldownMin(currentAccount, mins[which]);
                 rebuildContent(ctx);
             }).show();
         }));
         cfg.addView(makeActionRow(ctx, "Whitelisted User IDs",
-                TextUtils.isEmpty(DetorConfig.getGuardWhitelist()) ? "None (tap to add comma-separated IDs)" : DetorConfig.getGuardWhitelist(),
-                v -> showEditDialog(ctx, "Whitelist User IDs (comma separated)", DetorConfig.getGuardWhitelist(), false, val -> {
-                    DetorConfig.setGuardWhitelist(val);
+                TextUtils.isEmpty(DetorConfig.getGuardWhitelist(currentAccount)) ? "None (tap to add comma-separated IDs)" : DetorConfig.getGuardWhitelist(currentAccount),
+                false, v -> showEditDialog(ctx, "Whitelist User IDs (comma separated)", DetorConfig.getGuardWhitelist(currentAccount), false, val -> {
+                    DetorConfig.setGuardWhitelist(currentAccount, val);
                     rebuildContent(ctx);
                 })));
         contentList.addView(cfg);
 
-        addFootnote(ctx, "Auto-Reply works automatically for private DMs whenever DetorGram is active in background/notifications. Bots & verified system chats are always skipped.");
+        addFootnote(ctx, "Ye setting sirf current active account (" + getAccountDisplayLabel() + ") par apply hogi. Dusre accounts par iska koi asar nahi padega.");
     }
 
-    // ==================== SUB-PAGE 4: SMART ANTI-SPAM ====================
+    // ==================== SUB-PAGE 4: SMART ANTI-SPAM (PER-ACCOUNT) ====================
 
     private void buildAntiSpamPage(Context ctx) {
+        contentList.addView(makeAccountScopeBanner(ctx, 0xFFFF5252, 0xFFC62828));
+
         LinearLayout card = makeSectionCard(ctx, "3-Warning Auto-Block Engine");
-        addSwitch(ctx, card, "Enable Smart Anti-Spam Guard", DetorConfig.isAntiSpamEnabled(), v -> {
-            DetorConfig.setAntiSpamEnabled(v);
-            toast(ctx, v ? "Anti-Spam Guard ON" : "Anti-Spam Guard OFF");
+        addSwitch(ctx, card, "Enable Anti-Spam Guard (This Account)", DetorConfig.isAntiSpamEnabled(currentAccount), v -> {
+            DetorConfig.setAntiSpamEnabled(currentAccount, v);
+            toast(ctx, v ? "Anti-Spam ON for " + getAccountDisplayLabel() : "Anti-Spam OFF");
         }, true);
-        addSwitch(ctx, card, "Ignore Saved Contacts", DetorConfig.isAntiSpamIgnoreContacts(), DetorConfig::setAntiSpamIgnoreContacts, true);
-        addSwitch(ctx, card, "Detect Repeated Text Spam", DetorConfig.isAntiSpamRepeatDetect(), DetorConfig::setAntiSpamRepeatDetect, true);
-        addSwitch(ctx, card, "Detect Unsolicited Links (t.me / http)", DetorConfig.isAntiSpamLinkDetect(), DetorConfig::setAntiSpamLinkDetect, false);
+        addSwitch(ctx, card, "Ignore Saved Contacts", DetorConfig.isAntiSpamIgnoreContacts(currentAccount),
+                v -> DetorConfig.setAntiSpamIgnoreContacts(currentAccount, v), true);
+        addSwitch(ctx, card, "Detect Repeated Text Spam", DetorConfig.isAntiSpamRepeatDetect(currentAccount),
+                v -> DetorConfig.setAntiSpamRepeatDetect(currentAccount, v), true);
+        addSwitch(ctx, card, "Detect Unsolicited Links (t.me / http)", DetorConfig.isAntiSpamLinkDetect(currentAccount),
+                v -> DetorConfig.setAntiSpamLinkDetect(currentAccount, v), false);
         contentList.addView(card);
 
         LinearLayout rules = makeSectionCard(ctx, "Sensitivity & Messages");
         rules.addView(makeActionRow(ctx, "Flood Sensitivity",
-                DetorConfig.getAntiSpamThreshold() + " messages within 8 seconds = 1 Strike",
+                DetorConfig.getAntiSpamThreshold(currentAccount) + " messages within 8 seconds = 1 Strike", true,
                 v -> {
                     final String[] labels = {"Strict (4 msgs / 8s)", "Balanced (5 msgs / 8s)", "Relaxed (8 msgs / 8s)", "Heavy Flood Only (12 msgs / 8s)"};
                     final int[] vals = {4, 5, 8, 12};
                     new AlertDialog.Builder(ctx).setTitle("Flood Sensitivity").setItems(labels, (d, which) -> {
-                        DetorConfig.setAntiSpamThreshold(vals[which]);
+                        DetorConfig.setAntiSpamThreshold(currentAccount, vals[which]);
                         rebuildContent(ctx);
                     }).show();
                 }));
         rules.addView(makeActionRow(ctx, "Warning Message Template",
-                DetorConfig.getAntiSpamWarnMsg(),
-                v -> showEditDialog(ctx, "Warning Msg ({count}, {reason})", DetorConfig.getAntiSpamWarnMsg(), true, val -> {
-                    DetorConfig.setAntiSpamWarnMsg(val);
+                DetorConfig.getAntiSpamWarnMsg(currentAccount), true,
+                v -> showEditDialog(ctx, "Warning Msg ({count}, {reason})", DetorConfig.getAntiSpamWarnMsg(currentAccount), true, val -> {
+                    DetorConfig.setAntiSpamWarnMsg(currentAccount, val);
                     rebuildContent(ctx);
                 })));
         rules.addView(makeActionRow(ctx, "Final Auto-Block Message",
-                DetorConfig.getAntiSpamBlockMsg(),
-                v -> showEditDialog(ctx, "Block Notice ({reason})", DetorConfig.getAntiSpamBlockMsg(), true, val -> {
-                    DetorConfig.setAntiSpamBlockMsg(val);
+                DetorConfig.getAntiSpamBlockMsg(currentAccount), true,
+                v -> showEditDialog(ctx, "Block Notice ({reason})", DetorConfig.getAntiSpamBlockMsg(currentAccount), true, val -> {
+                    DetorConfig.setAntiSpamBlockMsg(currentAccount, val);
                     rebuildContent(ctx);
                 })));
         rules.addView(makeActionRow(ctx, "Whitelisted User IDs",
-                TextUtils.isEmpty(DetorConfig.getGuardWhitelist()) ? "None (tap to add)" : DetorConfig.getGuardWhitelist(),
-                v -> showEditDialog(ctx, "Whitelist User IDs (comma separated)", DetorConfig.getGuardWhitelist(), false, val -> {
-                    DetorConfig.setGuardWhitelist(val);
+                TextUtils.isEmpty(DetorConfig.getGuardWhitelist(currentAccount)) ? "None (tap to add)" : DetorConfig.getGuardWhitelist(currentAccount),
+                false, v -> showEditDialog(ctx, "Whitelist User IDs (comma separated)", DetorConfig.getGuardWhitelist(currentAccount), false, val -> {
+                    DetorConfig.setGuardWhitelist(currentAccount, val);
                     rebuildContent(ctx);
                 })));
         contentList.addView(rules);
 
         LinearLayout logs = makeSectionCard(ctx, "Logs & Reset");
         logs.addView(makeActionRow(ctx, "View Auto-Blocked Spammers Log",
-                DetorConfig.getSpamLog().size() + " blocked entries",
+                DetorConfig.getSpamLog(currentAccount).size() + " blocked on this account", true,
                 v -> {
-                    List<String> list = DetorConfig.getSpamLog();
-                    String msg = list.isEmpty() ? "No spammers blocked yet." : TextUtils.join("\n\n", list);
+                    List<String> list = DetorConfig.getSpamLog(currentAccount);
+                    String msg = list.isEmpty() ? "No spammers blocked yet on this account." : TextUtils.join("\n\n", list);
                     new AlertDialog.Builder(ctx)
                             .setTitle("Anti-Spam Block Log")
                             .setMessage(msg)
                             .setPositiveButton("OK", null)
                             .setNeutralButton("Clear Log", (d, w) -> {
-                                DetorConfig.clearSpamLog();
+                                DetorConfig.clearSpamLog(currentAccount);
                                 rebuildContent(ctx);
                             })
                             .show();
                 }));
-        logs.addView(makeActionRow(ctx, "Reset Strike Counters", "Clears active warning counts in memory", v -> {
-            DetorAutoGuard.clearSpamMemory();
+        logs.addView(makeActionRow(ctx, "Reset Strike Counters", "Clears warning counts for this account", false, v -> {
+            DetorAutoGuard.clearSpamMemory(currentAccount);
             toast(ctx, "Warning counters cleared");
         }));
         contentList.addView(logs);
@@ -317,19 +349,41 @@ public class DetorSettingsActivity extends BaseFragment {
         contentList.addView(card);
     }
 
-    // ==================== UI BUILDER HELPERS ====================
+    // ==================== PREMIUM UI HELPERS ====================
+
+    private View makeAccountScopeBanner(Context ctx, int cStart, int cEnd) {
+        LinearLayout box = new LinearLayout(ctx);
+        box.setOrientation(LinearLayout.HORIZONTAL);
+        box.setGravity(Gravity.CENTER_VERTICAL);
+        box.setPadding(AndroidUtilities.dp(14), AndroidUtilities.dp(10), AndroidUtilities.dp(14), AndroidUtilities.dp(10));
+        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{cStart, cEnd});
+        bg.setCornerRadius(AndroidUtilities.dp(14));
+        box.setBackground(bg);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = AndroidUtilities.dp(12);
+        box.setLayoutParams(lp);
+
+        TextView tv = new TextView(ctx);
+        tv.setText("👤 Specific Account Only: " + getAccountDisplayLabel());
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12.5f);
+        tv.setTypeface(Typeface.DEFAULT_BOLD);
+        tv.setTextColor(Color.WHITE);
+        box.addView(tv);
+        return box;
+    }
 
     private LinearLayout makeSectionCard(Context ctx, String headerTitle) {
         LinearLayout card = new LinearLayout(ctx);
         card.setOrientation(LinearLayout.VERTICAL);
         GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(AndroidUtilities.dp(16));
+        bg.setCornerRadius(AndroidUtilities.dp(18));
         bg.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        bg.setStroke(AndroidUtilities.dp(1), Theme.isCurrentThemeDark() ? 0x1AFFFFFF : 0x12000000);
         card.setBackground(bg);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.bottomMargin = AndroidUtilities.dp(14);
         card.setLayoutParams(lp);
-        card.setPadding(0, AndroidUtilities.dp(4), 0, AndroidUtilities.dp(8));
+        card.setPadding(0, AndroidUtilities.dp(4), 0, AndroidUtilities.dp(6));
 
         HeaderCell hc = new HeaderCell(ctx);
         hc.setText(headerTitle);
@@ -337,81 +391,115 @@ public class DetorSettingsActivity extends BaseFragment {
         return card;
     }
 
-    private View makeNavRow(Context ctx, String badge, int badgeColor, String title, String sub, String statusPill, View.OnClickListener click) {
+    private View makeNavRow(Context ctx, String emoji, int cTop, int cBottom, String title, String sub, String statusPill, boolean divider, View.OnClickListener click) {
+        LinearLayout wrap = new LinearLayout(ctx);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+
         LinearLayout row = new LinearLayout(ctx);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(11), AndroidUtilities.dp(16), AndroidUtilities.dp(11));
+        row.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(12), AndroidUtilities.dp(16), AndroidUtilities.dp(12));
         row.setBackground(Theme.getSelectorDrawable(false));
+        ScaleStateListAnimator.apply(row);
 
         TextView icon = new TextView(ctx);
-        icon.setText(badge);
-        icon.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 10);
-        icon.setTypeface(Typeface.DEFAULT_BOLD);
-        icon.setTextColor(Color.WHITE);
+        icon.setText(emoji);
+        icon.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 17);
         icon.setGravity(Gravity.CENTER);
-        GradientDrawable ibg = new GradientDrawable();
-        ibg.setCornerRadius(AndroidUtilities.dp(10));
-        ibg.setColor(badgeColor);
+        GradientDrawable ibg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{cTop, cBottom});
+        ibg.setCornerRadius(AndroidUtilities.dp(12));
+        ibg.setStroke(AndroidUtilities.dp(1), 0x33FFFFFF);
         icon.setBackground(ibg);
-        row.addView(icon, LayoutHelper.createLinear(44, 34, Gravity.CENTER_VERTICAL, 0, 0, 14, 0));
+        row.addView(icon, LayoutHelper.createLinear(38, 38, Gravity.CENTER_VERTICAL, 0, 0, 14, 0));
 
         LinearLayout col = new LinearLayout(ctx);
         col.setOrientation(LinearLayout.VERTICAL);
 
         TextView t = new TextView(ctx);
         t.setText(title);
-        t.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15.5f);
         t.setTypeface(Typeface.DEFAULT_BOLD);
         t.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         col.addView(t);
 
         TextView s = new TextView(ctx);
         s.setText(sub);
-        s.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+        s.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12.5f);
         s.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
         col.addView(s);
 
         row.addView(col, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
 
         if (!TextUtils.isEmpty(statusPill)) {
+            boolean active = "ACTIVE".equals(statusPill);
             TextView pill = new TextView(ctx);
             pill.setText(statusPill);
-            pill.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
+            pill.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 10.5f);
             pill.setTypeface(Typeface.DEFAULT_BOLD);
             pill.setTextColor(Color.WHITE);
-            pill.setPadding(AndroidUtilities.dp(8), AndroidUtilities.dp(3), AndroidUtilities.dp(8), AndroidUtilities.dp(3));
-            GradientDrawable pbg = new GradientDrawable();
-            pbg.setCornerRadius(AndroidUtilities.dp(8));
-            pbg.setColor("ON".equals(statusPill) ? 0xFF43A047 : 0xFF757575);
+            pill.setPadding(AndroidUtilities.dp(9), AndroidUtilities.dp(4), AndroidUtilities.dp(9), AndroidUtilities.dp(4));
+            GradientDrawable pbg = new GradientDrawable(
+                    GradientDrawable.Orientation.LEFT_RIGHT,
+                    active ? new int[]{0xFF00C853, 0xFF009688} : new int[]{0xFF616161, 0xFF424242}
+            );
+            pbg.setCornerRadius(AndroidUtilities.dp(10));
             pill.setBackground(pbg);
-            row.addView(pill, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 8, 0, 0, 0));
+            row.addView(pill, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 8, 0, 4, 0));
         }
 
+        TextView chev = new TextView(ctx);
+        chev.setText("›");
+        chev.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
+        chev.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+        row.addView(chev, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 6, 0, 0, 0));
+
         row.setOnClickListener(click);
-        return row;
+        wrap.addView(row);
+
+        if (divider) {
+            View div = new View(ctx);
+            div.setBackgroundColor(Theme.isCurrentThemeDark() ? 0x18FFFFFF : 0x10000000);
+            LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1);
+            dlp.leftMargin = AndroidUtilities.dp(68);
+            wrap.addView(div, dlp);
+        }
+        return wrap;
     }
 
-    private View makeActionRow(Context ctx, String title, String sub, View.OnClickListener click) {
+    private View makeActionRow(Context ctx, String title, String sub, boolean divider, View.OnClickListener click) {
+        LinearLayout wrap = new LinearLayout(ctx);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+
         LinearLayout row = new LinearLayout(ctx);
         row.setOrientation(LinearLayout.VERTICAL);
-        row.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(11), AndroidUtilities.dp(20), AndroidUtilities.dp(11));
+        row.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(12), AndroidUtilities.dp(20), AndroidUtilities.dp(12));
         row.setBackground(Theme.getSelectorDrawable(false));
 
         TextView t = new TextView(ctx);
         t.setText(title);
         t.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        t.setTypeface(Typeface.DEFAULT_BOLD);
         t.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         row.addView(t);
 
         TextView s = new TextView(ctx);
         s.setText(sub);
-        s.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+        s.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12.5f);
         s.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+        s.setPadding(0, AndroidUtilities.dp(2), 0, 0);
         row.addView(s);
 
         row.setOnClickListener(click);
-        return row;
+        wrap.addView(row);
+
+        if (divider) {
+            View div = new View(ctx);
+            div.setBackgroundColor(Theme.isCurrentThemeDark() ? 0x18FFFFFF : 0x10000000);
+            LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1);
+            dlp.leftMargin = AndroidUtilities.dp(20);
+            wrap.addView(div, dlp);
+        }
+        return wrap;
     }
 
     private void addSwitch(Context ctx, LinearLayout parent, String title, boolean init, DetorSettingsSheet.BoolSetter setter, boolean divider) {
