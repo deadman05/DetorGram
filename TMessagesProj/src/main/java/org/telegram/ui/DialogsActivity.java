@@ -3454,9 +3454,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             actionBar.setClipContent(true);
         //}
         actionBar.setTitleActionRunnable(() -> {
-            if (DetorStoriesHeader.collapseIfExpanded(DialogsActivity.this)) {
-                return;
-            }
             if (initialDialogsType != DIALOGS_TYPE_WIDGET) {
                 hideFloatingButton(false);
             }
@@ -5551,9 +5548,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
 
         updateStoriesVisibility(false);
-        if (!onlySelect && folderId == 0 && communityId == 0) {
-            DetorStoriesHeader.attach(this, contentView);
-        }
 
         updateFloatingButtonVisibility(false);
 
