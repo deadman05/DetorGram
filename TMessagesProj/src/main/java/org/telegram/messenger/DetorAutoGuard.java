@@ -27,23 +27,28 @@ public class DetorAutoGuard {
         long lastWarnMs = 0;
     }
 
-    private static final ConcurrentHashMap<Long, SpamTracker> spamMap = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<Long, Long> autoReplyLastMs = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, SpamTracker> spamMap = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Long> autoReplyLastMs = new ConcurrentHashMap<>();
 
-    public static void clearSpamMemory() {
-        spamMap.clear();
-        autoReplyLastMs.clear();
+    public static void clearSpamMemory(int account) {
+        String prefix = account + ":";
+        for (String k : new ArrayList<>(spamMap.keySet())) {
+            if (k.startsWith(prefix)) spamMap.remove(k);
+        }
+        for (String k : new ArrayList<>(autoReplyLastMs.keySet())) {
+            if (k.startsWith(prefix)) autoReplyLastMs.remove(k);
+        }
     }
 
     public static void onNewMessages(int account, long dialogId, ArrayList<MessageObject> messages) {
         try {
             if (messages == null || messages.isEmpty()) return;
-            if (!DetorConfig.isAutoReplyEnabled() && !DetorConfig.isAntiSpamEnabled()) return;
+            if (!DetorConfig.isAutoReplyEnabled(account) && !DetorConfig.isAntiSpamEnabled(account)) return;
             if (!DialogObject.isUserDialog(dialogId) || dialogId <= 0) return;
 
             long myId = UserConfig.getInstance(account).getClientUserId();
             if (dialogId == myId || dialogId == 777000L) return;
-            if (DetorConfig.isWhitelisted(dialogId)) return;
+            if (DetorConfig.isWhitelisted(account, dialogId)) return;
 
             MessagesController mc = MessagesController.getInstance(account);
             TLRPC.User user = mc.getUser(dialogId);
@@ -60,14 +65,14 @@ public class DetorAutoGuard {
                 if (nowSec > 0 && msg.messageOwner.date > 0 && (nowSec - msg.messageOwner.date) > 90) continue;
 
                 latestFresh = msg;
-                if (DetorConfig.isAntiSpamEnabled()) {
+                if (DetorConfig.isAntiSpamEnabled(account)) {
                     if (checkAntiSpam(account, dialogId, user, isContact, msg)) {
                         return;
                     }
                 }
             }
 
-            if (latestFresh != null && DetorConfig.isAutoReplyEnabled()) {
+            if (latestFresh != null && DetorConfig.isAutoReplyEnabled(account)) {
                 checkAutoReply(account, dialogId, isContact);
             }
         } catch (Throwable ignored) {
@@ -75,18 +80,18 @@ public class DetorAutoGuard {
     }
 
     private static boolean checkAntiSpam(int account, long dialogId, TLRPC.User user, boolean isContact, MessageObject msg) {
-        if (DetorConfig.isAntiSpamIgnoreContacts() && isContact) {
+        if (DetorConfig.isAntiSpamIgnoreContacts(account) && isContact) {
             return false;
         }
 
         long now = System.currentTimeMillis();
-        SpamTracker tracker = spamMap.get(dialogId);
+        String key = account + ":" + dialogId;
+        SpamTracker tracker = spamMap.get(key);
         if (tracker == null) {
             tracker = new SpamTracker();
-            spamMap.put(dialogId, tracker);
+            spamMap.put(key, tracker);
         }
 
-        // Reset warnings after 12 hours of quiet
         if (tracker.lastWarnMs > 0 && (now - tracker.lastWarnMs) > 12L * 60 * 60 * 1000) {
             tracker.warnings = 0;
         }
@@ -96,7 +101,7 @@ public class DetorAutoGuard {
         while (!tracker.recentTimes.isEmpty() && (now - tracker.recentTimes.peekFirst()) > 8000L) {
             tracker.recentTimes.removeFirst();
         }
-        int threshold = Math.max(3, DetorConfig.getAntiSpamThreshold());
+        int threshold = Math.max(3, DetorConfig.getAntiSpamThreshold(account));
         String reason = null;
         if (tracker.recentTimes.size() >= threshold) {
             reason = "Flood (" + tracker.recentTimes.size() + " msgs/8s)";
@@ -105,7 +110,7 @@ public class DetorAutoGuard {
 
         // 2. Repeated identical text detection
         String text = msg.messageText != null ? msg.messageText.toString().trim() : "";
-        if (reason == null && DetorConfig.isAntiSpamRepeatDetect() && text.length() >= 2) {
+        if (reason == null && DetorConfig.isAntiSpamRepeatDetect(account) && text.length() >= 2) {
             if (text.equalsIgnoreCase(tracker.lastText)) {
                 tracker.repeatCount++;
                 if (tracker.repeatCount >= 3) {
@@ -131,7 +136,7 @@ public class DetorAutoGuard {
         }
 
         // 4. Promo / Link spam from non-contacts
-        if (reason == null && DetorConfig.isAntiSpamLinkDetect() && !isContact && !text.isEmpty()) {
+        if (reason == null && DetorConfig.isAntiSpamLinkDetect(account) && !isContact && !text.isEmpty()) {
             String low = text.toLowerCase(Locale.US);
             if (low.contains("t.me/") || low.contains("http://") || low.contains("https://")
                     || low.contains("bit.ly/") || low.contains("wa.me/") || low.contains("joinchat")) {
@@ -143,7 +148,6 @@ public class DetorAutoGuard {
             return false;
         }
 
-        // Minimum 4s cooldown between strikes so one burst = 1 warning
         if (now - tracker.lastWarnMs < 4000L) {
             return true;
         }
@@ -155,21 +159,20 @@ public class DetorAutoGuard {
         final String userName = UserObject.getUserName(user);
 
         if (strike < 3) {
-            String warnTemplate = DetorConfig.getAntiSpamWarnMsg();
-            String warnText = warnTemplate
+            String warnText = DetorConfig.getAntiSpamWarnMsg(account)
                     .replace("{count}", String.valueOf(strike))
                     .replace("{reason}", finalReason);
             sendDelayedText(account, dialogId, warnText, 500L);
         } else {
-            String blockText = DetorConfig.getAntiSpamBlockMsg()
+            String blockText = DetorConfig.getAntiSpamBlockMsg(account)
                     .replace("{reason}", finalReason);
             sendDelayedText(account, dialogId, blockText, 400L);
             AndroidUtilities.runOnUIThread(() -> {
                 try {
                     MessagesController.getInstance(account).blockPeer(dialogId);
                     String time = new SimpleDateFormat("dd MMM HH:mm", Locale.US).format(new Date());
-                    DetorConfig.addSpamLog(time + " • " + userName + " (" + dialogId + ") — " + finalReason);
-                    spamMap.remove(dialogId);
+                    DetorConfig.addSpamLog(account, time + " • " + userName + " (" + dialogId + ") — " + finalReason);
+                    spamMap.remove(key);
                 } catch (Throwable ignored) {
                 }
             }, 1100L);
@@ -178,24 +181,25 @@ public class DetorAutoGuard {
     }
 
     private static void checkAutoReply(int account, long dialogId, boolean isContact) {
-        if (DetorConfig.isAutoReplyBgOnly() && !ApplicationLoader.mainInterfacePaused) {
+        if (DetorConfig.isAutoReplyBgOnly(account) && !ApplicationLoader.mainInterfacePaused) {
             return;
         }
-        if (DetorConfig.isAutoReplyNonContactsOnly() && isContact) {
+        if (DetorConfig.isAutoReplyNonContactsOnly(account) && isContact) {
             return;
         }
 
         long now = System.currentTimeMillis();
-        long cooldownMs = Math.max(1, DetorConfig.getAutoReplyCooldownMin()) * 60_000L;
-        Long last = autoReplyLastMs.get(dialogId);
+        long cooldownMs = Math.max(1, DetorConfig.getAutoReplyCooldownMin(account)) * 60_000L;
+        String key = account + ":" + dialogId;
+        Long last = autoReplyLastMs.get(key);
         if (last != null && (now - last) < cooldownMs) {
             return;
         }
 
-        String replyText = DetorConfig.getAutoReplyText();
+        String replyText = DetorConfig.getAutoReplyText(account);
         if (TextUtils.isEmpty(replyText)) return;
 
-        autoReplyLastMs.put(dialogId, now);
+        autoReplyLastMs.put(key, now);
         sendDelayedText(account, dialogId, replyText, 700L);
     }
 
