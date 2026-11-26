@@ -19,6 +19,11 @@ public class DetorConfig {
         return prefs;
     }
 
+    private static String accKey(int account, String key) {
+        long uid = UserConfig.getInstance(account).getClientUserId();
+        return (uid != 0 ? ("u" + uid + "_") : ("a" + account + "_")) + key;
+    }
+
     // --- 1. Privacy & Ghost Mode ---
     public static boolean isHideSeen() { return getPrefs().getBoolean("hide_seen", false); }
     public static void setHideSeen(boolean v) { getPrefs().edit().putBoolean("hide_seen", v).apply(); }
@@ -52,8 +57,13 @@ public class DetorConfig {
     public static boolean isConfirmCall() { return getPrefs().getBoolean("confirm_call", true); }
     public static void setConfirmCall(boolean v) { getPrefs().edit().putBoolean("confirm_call", v).apply(); }
 
-    public static boolean isHideStoriesBar() { return getPrefs().getBoolean("hide_stories_bar", false); }
-    public static void setHideStoriesBar(boolean v) { getPrefs().edit().putBoolean("hide_stories_bar", v).apply(); }
+    public static boolean isHideStoriesBar() { return getPrefs().getBoolean("hide_stories_bar_v2", false); }
+    public static void setHideStoriesBar(boolean v) {
+        getPrefs().edit().putBoolean("hide_stories_bar_v2", v).apply();
+        try {
+            NotificationCenter.getInstance(UserConfig.selectedAccount).postNotificationName(NotificationCenter.storiesUpdated);
+        } catch (Throwable ignored) {}
+    }
 
     public static boolean isForwardNoQuote() { return getPrefs().getBoolean("forward_no_quote", false); }
     public static void setForwardNoQuote(boolean v) { getPrefs().edit().putBoolean("forward_no_quote", v).apply(); }
@@ -64,55 +74,55 @@ public class DetorConfig {
     public static boolean isMultiStoryUnlock() { return getPrefs().getBoolean("multi_story_unlock", true); }
     public static void setMultiStoryUnlock(boolean v) { getPrefs().edit().putBoolean("multi_story_unlock", v).apply(); }
 
-    // --- Auto-Reply (Away Mode) ---
-    public static boolean isAutoReplyEnabled() { return getPrefs().getBoolean("ar_enabled", false); }
-    public static void setAutoReplyEnabled(boolean v) { getPrefs().edit().putBoolean("ar_enabled", v).apply(); }
+    // --- 4. Auto-Reply (Per Account) ---
+    public static boolean isAutoReplyEnabled(int account) { return getPrefs().getBoolean(accKey(account, "ar_enabled"), false); }
+    public static void setAutoReplyEnabled(int account, boolean v) { getPrefs().edit().putBoolean(accKey(account, "ar_enabled"), v).apply(); }
 
-    public static boolean isAutoReplyBgOnly() { return getPrefs().getBoolean("ar_bg_only", true); }
-    public static void setAutoReplyBgOnly(boolean v) { getPrefs().edit().putBoolean("ar_bg_only", v).apply(); }
+    public static boolean isAutoReplyBgOnly(int account) { return getPrefs().getBoolean(accKey(account, "ar_bg_only"), true); }
+    public static void setAutoReplyBgOnly(int account, boolean v) { getPrefs().edit().putBoolean(accKey(account, "ar_bg_only"), v).apply(); }
 
-    public static boolean isAutoReplyNonContactsOnly() { return getPrefs().getBoolean("ar_non_contacts", false); }
-    public static void setAutoReplyNonContactsOnly(boolean v) { getPrefs().edit().putBoolean("ar_non_contacts", v).apply(); }
+    public static boolean isAutoReplyNonContactsOnly(int account) { return getPrefs().getBoolean(accKey(account, "ar_non_contacts"), false); }
+    public static void setAutoReplyNonContactsOnly(int account, boolean v) { getPrefs().edit().putBoolean(accKey(account, "ar_non_contacts"), v).apply(); }
 
-    public static String getAutoReplyText() {
-        return getPrefs().getString("ar_text", "Hey! I'm currently offline/busy. I'll reply as soon as I'm back.");
+    public static String getAutoReplyText(int account) {
+        return getPrefs().getString(accKey(account, "ar_text"), "Hey! I'm currently offline/busy. I'll reply as soon as I'm back.");
     }
-    public static void setAutoReplyText(String s) { getPrefs().edit().putString("ar_text", s).apply(); }
+    public static void setAutoReplyText(int account, String s) { getPrefs().edit().putString(accKey(account, "ar_text"), s).apply(); }
 
-    public static int getAutoReplyCooldownMin() { return getPrefs().getInt("ar_cooldown_min", 30); }
-    public static void setAutoReplyCooldownMin(int m) { getPrefs().edit().putInt("ar_cooldown_min", m).apply(); }
+    public static int getAutoReplyCooldownMin(int account) { return getPrefs().getInt(accKey(account, "ar_cooldown_min"), 30); }
+    public static void setAutoReplyCooldownMin(int account, int m) { getPrefs().edit().putInt(accKey(account, "ar_cooldown_min"), m).apply(); }
 
-    // --- Smart Anti-Spam (3 Warnings -> Auto-Block) ---
-    public static boolean isAntiSpamEnabled() { return getPrefs().getBoolean("as_enabled", false); }
-    public static void setAntiSpamEnabled(boolean v) { getPrefs().edit().putBoolean("as_enabled", v).apply(); }
+    // --- 5. Smart Anti-Spam (Per Account: 3 Warnings -> Auto-Block) ---
+    public static boolean isAntiSpamEnabled(int account) { return getPrefs().getBoolean(accKey(account, "as_enabled"), false); }
+    public static void setAntiSpamEnabled(int account, boolean v) { getPrefs().edit().putBoolean(accKey(account, "as_enabled"), v).apply(); }
 
-    public static boolean isAntiSpamIgnoreContacts() { return getPrefs().getBoolean("as_ignore_contacts", true); }
-    public static void setAntiSpamIgnoreContacts(boolean v) { getPrefs().edit().putBoolean("as_ignore_contacts", v).apply(); }
+    public static boolean isAntiSpamIgnoreContacts(int account) { return getPrefs().getBoolean(accKey(account, "as_ignore_contacts"), true); }
+    public static void setAntiSpamIgnoreContacts(int account, boolean v) { getPrefs().edit().putBoolean(accKey(account, "as_ignore_contacts"), v).apply(); }
 
-    public static boolean isAntiSpamLinkDetect() { return getPrefs().getBoolean("as_link_detect", true); }
-    public static void setAntiSpamLinkDetect(boolean v) { getPrefs().edit().putBoolean("as_link_detect", v).apply(); }
+    public static boolean isAntiSpamLinkDetect(int account) { return getPrefs().getBoolean(accKey(account, "as_link_detect"), true); }
+    public static void setAntiSpamLinkDetect(int account, boolean v) { getPrefs().edit().putBoolean(accKey(account, "as_link_detect"), v).apply(); }
 
-    public static boolean isAntiSpamRepeatDetect() { return getPrefs().getBoolean("as_repeat_detect", true); }
-    public static void setAntiSpamRepeatDetect(boolean v) { getPrefs().edit().putBoolean("as_repeat_detect", v).apply(); }
+    public static boolean isAntiSpamRepeatDetect(int account) { return getPrefs().getBoolean(accKey(account, "as_repeat_detect"), true); }
+    public static void setAntiSpamRepeatDetect(int account, boolean v) { getPrefs().edit().putBoolean(accKey(account, "as_repeat_detect"), v).apply(); }
 
-    public static int getAntiSpamThreshold() { return getPrefs().getInt("as_threshold", 5); }
-    public static void setAntiSpamThreshold(int n) { getPrefs().edit().putInt("as_threshold", n).apply(); }
+    public static int getAntiSpamThreshold(int account) { return getPrefs().getInt(accKey(account, "as_threshold"), 5); }
+    public static void setAntiSpamThreshold(int account, int n) { getPrefs().edit().putInt(accKey(account, "as_threshold"), n).apply(); }
 
-    public static String getAntiSpamWarnMsg() {
-        return getPrefs().getString("as_warn_msg", "⚠️ Warning {count}/3 ({reason}): Please stop spamming or you will be automatically blocked.");
+    public static String getAntiSpamWarnMsg(int account) {
+        return getPrefs().getString(accKey(account, "as_warn_msg"), "⚠️ Warning {count}/3 ({reason}): Please stop spamming or you will be automatically blocked.");
     }
-    public static void setAntiSpamWarnMsg(String s) { getPrefs().edit().putString("as_warn_msg", s).apply(); }
+    public static void setAntiSpamWarnMsg(int account, String s) { getPrefs().edit().putString(accKey(account, "as_warn_msg"), s).apply(); }
 
-    public static String getAntiSpamBlockMsg() {
-        return getPrefs().getString("as_block_msg", "🚫 Warning 3/3 ({reason}): Spam limit exceeded. You have been automatically blocked.");
+    public static String getAntiSpamBlockMsg(int account) {
+        return getPrefs().getString(accKey(account, "as_block_msg"), "🚫 Warning 3/3 ({reason}): Spam limit exceeded. You have been automatically blocked.");
     }
-    public static void setAntiSpamBlockMsg(String s) { getPrefs().edit().putString("as_block_msg", s).apply(); }
+    public static void setAntiSpamBlockMsg(int account, String s) { getPrefs().edit().putString(accKey(account, "as_block_msg"), s).apply(); }
 
-    public static String getGuardWhitelist() { return getPrefs().getString("guard_whitelist", ""); }
-    public static void setGuardWhitelist(String s) { getPrefs().edit().putString("guard_whitelist", s).apply(); }
+    public static String getGuardWhitelist(int account) { return getPrefs().getString(accKey(account, "guard_whitelist"), ""); }
+    public static void setGuardWhitelist(int account, String s) { getPrefs().edit().putString(accKey(account, "guard_whitelist"), s).apply(); }
 
-    public static boolean isWhitelisted(long userId) {
-        String raw = getGuardWhitelist();
+    public static boolean isWhitelisted(int account, long userId) {
+        String raw = getGuardWhitelist(account);
         if (raw == null || raw.trim().isEmpty()) return false;
         String target = String.valueOf(userId);
         for (String p : raw.split("[,\\s]+")) {
@@ -123,8 +133,8 @@ public class DetorConfig {
 
     private static final String LOG_SEP = "\n<<<DETOR_LOG>>>\n";
 
-    public static java.util.List<String> getSpamLog() {
-        String raw = getPrefs().getString("as_block_log", "");
+    public static java.util.List<String> getSpamLog(int account) {
+        String raw = getPrefs().getString(accKey(account, "as_block_log"), "");
         java.util.ArrayList<String> list = new java.util.ArrayList<>();
         if (raw != null && !raw.isEmpty()) {
             for (String p : raw.split(java.util.regex.Pattern.quote(LOG_SEP))) {
@@ -134,8 +144,8 @@ public class DetorConfig {
         return list;
     }
 
-    public static void addSpamLog(String entry) {
-        java.util.List<String> list = getSpamLog();
+    public static void addSpamLog(int account, String entry) {
+        java.util.List<String> list = getSpamLog(account);
         list.add(0, entry);
         while (list.size() > 50) list.remove(list.size() - 1);
         StringBuilder sb = new StringBuilder();
@@ -143,14 +153,46 @@ public class DetorConfig {
             if (i > 0) sb.append(LOG_SEP);
             sb.append(list.get(i));
         }
-        getPrefs().edit().putString("as_block_log", sb.toString()).apply();
+        getPrefs().edit().putString(accKey(account, "as_block_log"), sb.toString()).apply();
     }
 
-    public static void clearSpamLog() {
-        getPrefs().edit().remove("as_block_log").apply();
+    public static void clearSpamLog(int account) {
+        getPrefs().edit().remove(accKey(account, "as_block_log")).apply();
     }
 
-    // --- Quick Saved Templates ---
+    // Backward-compatible fallbacks (prevents compile errors if any class uses 0-arg calls)
+    public static boolean isAutoReplyEnabled() { return isAutoReplyEnabled(UserConfig.selectedAccount); }
+    public static void setAutoReplyEnabled(boolean v) { setAutoReplyEnabled(UserConfig.selectedAccount, v); }
+    public static boolean isAutoReplyBgOnly() { return isAutoReplyBgOnly(UserConfig.selectedAccount); }
+    public static void setAutoReplyBgOnly(boolean v) { setAutoReplyBgOnly(UserConfig.selectedAccount, v); }
+    public static boolean isAutoReplyNonContactsOnly() { return isAutoReplyNonContactsOnly(UserConfig.selectedAccount); }
+    public static void setAutoReplyNonContactsOnly(boolean v) { setAutoReplyNonContactsOnly(UserConfig.selectedAccount, v); }
+    public static String getAutoReplyText() { return getAutoReplyText(UserConfig.selectedAccount); }
+    public static void setAutoReplyText(String s) { setAutoReplyText(UserConfig.selectedAccount, s); }
+    public static int getAutoReplyCooldownMin() { return getAutoReplyCooldownMin(UserConfig.selectedAccount); }
+    public static void setAutoReplyCooldownMin(int m) { setAutoReplyCooldownMin(UserConfig.selectedAccount, m); }
+    public static boolean isAntiSpamEnabled() { return isAntiSpamEnabled(UserConfig.selectedAccount); }
+    public static void setAntiSpamEnabled(boolean v) { setAntiSpamEnabled(UserConfig.selectedAccount, v); }
+    public static boolean isAntiSpamIgnoreContacts() { return isAntiSpamIgnoreContacts(UserConfig.selectedAccount); }
+    public static void setAntiSpamIgnoreContacts(boolean v) { setAntiSpamIgnoreContacts(UserConfig.selectedAccount, v); }
+    public static boolean isAntiSpamLinkDetect() { return isAntiSpamLinkDetect(UserConfig.selectedAccount); }
+    public static void setAntiSpamLinkDetect(boolean v) { setAntiSpamLinkDetect(UserConfig.selectedAccount, v); }
+    public static boolean isAntiSpamRepeatDetect() { return isAntiSpamRepeatDetect(UserConfig.selectedAccount); }
+    public static void setAntiSpamRepeatDetect(boolean v) { setAntiSpamRepeatDetect(UserConfig.selectedAccount, v); }
+    public static int getAntiSpamThreshold() { return getAntiSpamThreshold(UserConfig.selectedAccount); }
+    public static void setAntiSpamThreshold(int n) { setAntiSpamThreshold(UserConfig.selectedAccount, n); }
+    public static String getAntiSpamWarnMsg() { return getAntiSpamWarnMsg(UserConfig.selectedAccount); }
+    public static void setAntiSpamWarnMsg(String s) { setAntiSpamWarnMsg(UserConfig.selectedAccount, s); }
+    public static String getAntiSpamBlockMsg() { return getAntiSpamBlockMsg(UserConfig.selectedAccount); }
+    public static void setAntiSpamBlockMsg(String s) { setAntiSpamBlockMsg(UserConfig.selectedAccount, s); }
+    public static String getGuardWhitelist() { return getGuardWhitelist(UserConfig.selectedAccount); }
+    public static void setGuardWhitelist(String s) { setGuardWhitelist(UserConfig.selectedAccount, s); }
+    public static boolean isWhitelisted(long userId) { return isWhitelisted(UserConfig.selectedAccount, userId); }
+    public static java.util.List<String> getSpamLog() { return getSpamLog(UserConfig.selectedAccount); }
+    public static void addSpamLog(String entry) { addSpamLog(UserConfig.selectedAccount, entry); }
+    public static void clearSpamLog() { clearSpamLog(UserConfig.selectedAccount); }
+
+    // --- 6. Quick Saved Templates ---
     private static final String TPL_SEP = "\n<<<DETOR_TPL>>>\n";
 
     public static java.util.List<String> getTemplates() {
@@ -189,7 +231,7 @@ public class DetorConfig {
         getPrefs().edit().putString("quick_templates", sb.toString()).apply();
     }
 
-    // --- Deleted Messages Tracker ("deleted" tag ke liye) ---
+    // --- 7. Deleted Messages Tracker ("deleted" tag ke liye) ---
     private static synchronized void ensureDeletedCache() {
         if (deletedMessagesCache == null) {
             Set<String> saved = getPrefs().getStringSet("deleted_msgs", Collections.emptySet());
