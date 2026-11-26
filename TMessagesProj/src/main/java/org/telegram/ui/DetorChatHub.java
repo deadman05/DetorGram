@@ -190,10 +190,12 @@ public class DetorChatHub {
     }
 
     private static void applyFabStyle(TextView fab, boolean running, String text) {
-        GradientDrawable bg = new GradientDrawable();
+        GradientDrawable bg = new GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                running ? new int[]{0xFFFF5252, 0xFFC62828} : new int[]{0xFF2FB8FF, 0xFF6C3BFF, 0xFFA83BFF}
+        );
         bg.setShape(GradientDrawable.OVAL);
-        bg.setColor(running ? 0xFFE53935 : 0xFF2AABEE);
-        bg.setStroke(AndroidUtilities.dp(1.5f), 0x66FFFFFF);
+        bg.setStroke(AndroidUtilities.dp(1.5f), 0x88FFFFFF);
         fab.setBackground(bg);
         fab.setText(text);
         fab.setTextSize(TypedValue.COMPLEX_UNIT_DIP, running ? 11 : 18);
@@ -302,9 +304,11 @@ public class DetorChatHub {
         card.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(12), AndroidUtilities.dp(12), AndroidUtilities.dp(12));
 
         GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(AndroidUtilities.dp(14));
-        bg.setColor(Theme.isCurrentThemeDark() ? 0x18FFFFFF : 0x0D000000);
+        bg.setCornerRadius(AndroidUtilities.dp(16));
+        bg.setColor(Theme.isCurrentThemeDark() ? 0x1EFFFFFF : 0x0C000000);
+        bg.setStroke(AndroidUtilities.dp(1), Theme.isCurrentThemeDark() ? 0x26FFFFFF : 0x16000000);
         card.setBackground(bg);
+        org.telegram.ui.Components.ScaleStateListAnimator.apply(card);
 
         LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
